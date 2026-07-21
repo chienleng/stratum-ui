@@ -134,8 +134,8 @@
 	--su-chart-axis-font-size: var(--su-font-size-2xs);
 	--su-chart-tick: #000000;
 	--su-chart-focus: var(--su-oe-red);
-	--su-chart-brush-handle: var(--su-oe-dark-grey);
-	--su-chart-brush-selection: rgb(0 0 0 / 0.06);
+	--su-chart-brush-handle: var(--su-oe-dark-red);
+	--su-chart-brush-selection: rgb(150 63 41 / 0.22);
 	--su-chart-annotation: var(--su-oe-mid-grey);
 
 	--su-chart-series-1: #577cff;

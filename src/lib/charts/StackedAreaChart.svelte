@@ -1,0 +1,403 @@
+<script lang="ts">
+	/**
+	 * Stacked Area Chart Component
+	 *
+	 * Main chart rendering component using LayerCake.
+	 * Supports both stacked area and line chart modes.
+	 */
+	import { LayerCake, Svg, flatten, stack as lcStack, groupLonger } from 'layercake';
+	import { stack as d3Stack, stackOffsetDiverging } from 'd3-shape';
+	import { scaleOrdinal, scaleTime } from 'd3-scale';
+	// v2 Element components
+	import {
+		StackedArea,
+		Area,
+		LoadingOverlay,
+		AxisX,
+		AxisY,
+		ClipPath,
+		LineX,
+		LineY,
+		Dot,
+		Shading,
+		StepHoverBand,
+		Annotations,
+		NetTotalLine,
+		HatchOverlay
+	} from './elements/index.js';
+	import { indexOfTime } from './binary-search.js';
+	import { perfSpan } from './perf.js';
+	import type ChartStore from './ChartStore.svelte.js';
+	import type { SeriesRow } from './types.js';
+
+	interface Props {
+		/** The chart store instance */
+		chart: ChartStore;
+		/** Series-key hover from StackedArea paths */
+		onmousemove?: (evt: { data: SeriesRow; key?: string }) => void;
+		onmouseout?: () => void;
+		onpointerup?: (evt: SeriesRow) => void;
+		/** Whether panning is enabled (controls touch-action CSS) */
+		enablePan?: boolean;
+		/** Ranges currently being fetched */
+		loadingRanges?: Array<{ start: number; end: number }>;
+		/** Key for net total values in data (renders step line) */
+		netTotalKey?: string;
+		/** Colour for net total line */
+		netTotalColor?: string;
+		/** Start time (ms) for hatched projection overlay */
+		overlayStart?: number | null;
+		/** When true, hover line spans from y=0 to the stacked area max */
+		clampHoverLine?: boolean;
+		/** When true, stacked area grows from y=0 on data change */
+		animate?: boolean;
+		/** Hide annotations on mobile viewports */
+		hideAnnotationsOnMobile?: boolean;
+		/**
+		 * When true, clip axis content (gridlines, labels) to the exact chart area
+		 * rather than the default expanded region that gives axis labels 15 px of
+		 * overflow on each side. Use for compact charts where gridlines shouldn't
+		 * extend past the chart edges.
+		 */
+		tightAxisClip?: boolean;
+	}
+
+	let {
+		chart,
+		onmousemove,
+		onmouseout,
+		onpointerup,
+		enablePan = false,
+		loadingRanges = [],
+		netTotalKey,
+		netTotalColor = 'var(--su-chart-focus, #c74523)',
+		overlayStart,
+		clampHoverLine = false,
+		animate = false,
+		hideAnnotationsOnMobile = false,
+		tightAxisClip = false
+	}: Props = $props();
+
+	// Get chart styles
+	let styles = $derived(chart.chartStyles);
+	let id = $derived(styles.htmlId);
+
+	// Determine if curve type is step (for band hover + axis alignment)
+	let isStepMode = $derived(chart.chartOptions.selectedCurveType === 'step');
+
+	// In step mode, append a phantom trailing point one interval past the last
+	// real point. Under `curveStep` (centred), this turns the last real point
+	// into an interior point whose band spans [T_n - I/2, T_n + I/2] — a full
+	// bucket. The phantom itself is clipped by the LayerCake chart area.
+	// `chart.renderXDomain` already extends the visible area by I/2 to match.
+	let renderSeriesData = $derived.by(() => {
+		if (!isStepMode || chart.stepIntervalMs <= 0) return chart.seriesScaledData;
+		const src = chart.seriesScaledData;
+		const last = src[src.length - 1];
+		const phantomTime = last.time + chart.stepIntervalMs;
+		return [...src, { ...last, time: phantomTime, date: new Date(phantomTime) }];
+	});
+
+	// Process data based on chart type (using render data so step charts get
+	// the phantom trailing point).
+	let stackedData = $derived.by(() => {
+		if (renderSeriesData.length === 0) return [];
+
+		return perfSpan('chart:d3-stack', () => {
+			if (chart.useDivergingStack) {
+				const stackGen = d3Stack().keys(chart.visibleSeriesNames).offset(stackOffsetDiverging);
+				return stackGen(renderSeriesData as any);
+			}
+
+			return lcStack(renderSeriesData, chart.visibleSeriesNames);
+		});
+	});
+
+	let groupedData = $derived(
+		renderSeriesData.length > 0 ? groupLonger(renderSeriesData, chart.visibleSeriesNames) : []
+	);
+
+	let chartData = $derived(chart.chartOptions.isChartTypeStackedArea ? stackedData : groupedData);
+
+	let flatData = $derived(
+		chart.chartOptions.isChartTypeStackedArea
+			? flatten(stackedData)
+			: groupedData.length > 0
+				? flatten(groupedData, 'values')
+				: []
+	);
+
+	let isAreaOverlay = $derived(chart.chartOptions.isChartTypeArea);
+
+	let stackedAreaDisplay = $derived<'stacked-area' | 'line'>(
+		chart.chartOptions.isChartTypeLine ? 'line' : 'stacked-area'
+	);
+
+	// Clip path IDs — each <Svg> defines its own pair so cross-svg
+	// `url(#…)` references can't accidentally resolve to a sibling layer's
+	// clipPath when the document has multiple layered svgs with the same
+	// LayerCake context.
+	let dataClipPathId = $derived(`${id}-clip-data`);
+	let dataClipPathAxisId = $derived(`${id}-clip-data-axis`);
+	let hoverClipPathId = $derived(`${id}-clip-hover`);
+	let hoverClipPathAxisId = $derived(`${id}-clip-hover-axis`);
+	let axesClipPathId = $derived(`${id}-clip-axes`);
+	let axesClipPathAxisId = $derived(`${id}-clip-axes-axis`);
+
+	// `clipPathId` is exposed to consumer Shading components — they live inside
+	// the data <Svg>, so they share the data svg's tight clip.
+	let clipPathId = $derived(dataClipPathId);
+	let clipPath = $derived(`url(#${dataClipPathId})`);
+	// When `tightAxisClip` is true, reuse the tight clip for axis content too.
+	let hoverClipPath = $derived(`url(#${tightAxisClip ? hoverClipPathId : hoverClipPathAxisId})`);
+	let axesClipPath = $derived(`url(#${tightAxisClip ? axesClipPathId : axesClipPathAxisId})`);
+
+	// Axis clip allows axis labels to extend `axisBufferLeft/Right` pixels past
+	// the data area on each side. We cover at least 15 px (the historical default
+	// for charts that ride flush against their container) but expand further
+	// when the chart reserves real left/right padding for axis labels —
+	// `AxisY` already shifts its labels by `-$padding.left` to land them in
+	// that gutter, so the clip needs to cover the shifted area.
+	let axisBufferLeft = $derived(Math.max(15, styles.chartPadding.left));
+	let axisBufferRight = $derived(Math.max(15, styles.chartPadding.right));
+
+	// With no rows the y-domain collapses to [0, 0] and d3's degenerate scale
+	// would float a lone "0" gridline at half height — suppress scale-derived
+	// y ticks while empty. Explicit tick arrays (e.g. the price chart's fixed
+	// hybrid axis) stay meaningful regardless of data, so they're kept.
+	let hasRows = $derived(chart.seriesScaledData.length > 0);
+	let yTicksWhenEmpty = $derived(hasRows || Array.isArray(chart.yTicks) ? chart.yTicks : []);
+
+	// When clampHoverLine is true, limit the hover/focus line to the stacked area height
+	let hoverMaxY = $derived.by(() => {
+		if (!clampHoverLine || !chart.hoverTime) return undefined;
+		const rows = chart.seriesScaledDataWithMinMax;
+		const i = indexOfTime(rows, chart.hoverTime);
+		return i === -1 ? undefined : rows[i]._max;
+	});
+
+	let focusMaxY = $derived.by(() => {
+		if (!clampHoverLine || !chart.focusTime) return undefined;
+		const rows = chart.seriesScaledDataWithMinMax;
+		const i = indexOfTime(rows, chart.focusTime);
+		return i === -1 ? undefined : rows[i]._max;
+	});
+</script>
+
+<div
+	class="su-stacked-area-chart"
+	style:height="{styles.chartHeightPx}px"
+	style:touch-action={enablePan ? 'none' : undefined}
+>
+	<LayerCake
+		padding={styles.chartPadding}
+		x={chart.x}
+		y={chart.y}
+		z={chart.z}
+		yDomain={chart.yDomain}
+		xDomain={chart.renderXDomain}
+		zDomain={chart.seriesNames}
+		xScale={scaleTime()}
+		zScale={scaleOrdinal()}
+		zRange={chart.visibleSeriesColours}
+		data={chartData}
+		{flatData}
+		{...chart.yScale ? { yScale: chart.yScale } : {}}
+	>
+		<!-- Main chart area -->
+		<Svg>
+			<defs>
+				<ClipPath id={dataClipPathId} customPaddingLeft={0} customPaddingRight={0} />
+				<ClipPath
+					id={dataClipPathAxisId}
+					customPaddingLeft={axisBufferLeft}
+					customPaddingRight={axisBufferRight}
+				/>
+			</defs>
+
+			<!-- Background shading (behind chart content) -->
+			{#if chart.bgShadingData?.length > 0}
+				<Shading dataset={chart.bgShadingData} fill={chart.bgShadingFill} {clipPathId} />
+			{/if}
+
+			<!-- Chart content (on top to capture hover with series info) -->
+			<g clip-path={clipPath}>
+				{#if isAreaOverlay}
+					<Area
+						dataset={chart.seriesScaledData}
+						curveType={chart.chartOptions.curveFunction}
+						seriesColours={chart.seriesColours}
+						highlightId={chart.chartOptions.allowHoverHighlight ? chart.hoverKey : null}
+						stepMode={isStepMode}
+						{onmousemove}
+						{onmouseout}
+						{onpointerup}
+					/>
+				{:else}
+					<StackedArea
+						{animate}
+						dataset={chart.seriesScaledData}
+						display={stackedAreaDisplay}
+						curveType={chart.chartOptions.curveFunction}
+						seriesColours={chart.seriesColours}
+						highlightId={chart.chartOptions.allowHoverHighlight ? chart.hoverKey : null}
+						lighterNegative={chart.lighterNegative}
+						solidLineRange={chart.solidLineRange}
+						stepMode={isStepMode}
+						{onmousemove}
+						{onmouseout}
+						{onpointerup}
+					/>
+				{/if}
+
+				{#if netTotalKey && isStepMode}
+					<NetTotalLine dataset={renderSeriesData} valueKey={netTotalKey} stroke={netTotalColor} />
+				{/if}
+
+				{#if chart.fgShadingData?.length > 0}
+					<Shading dataset={chart.fgShadingData} fill={chart.fgShadingFill} {clipPathId} />
+				{/if}
+
+				{#if overlayStart != null}
+					<HatchOverlay startTime={overlayStart} patternId="{id}-hatch-pattern" />
+				{/if}
+			</g>
+
+			<!-- Reference lines (capacity annotations) -->
+			{#each chart.yReferenceLines as refLine (refLine.value)}
+				<LineY
+					yValue={refLine.value}
+					label={refLine.label}
+					strokeColour={refLine.colour || 'var(--su-chart-annotation, #666666)'}
+				/>
+			{/each}
+
+			<!-- Custom annotations -->
+			{#if chart.annotations.length > 0}
+				<Annotations items={chart.annotations} hideOnMobile={hideAnnotationsOnMobile} />
+			{/if}
+		</Svg>
+
+		<!-- Loading overlay -->
+		{#if loadingRanges.length > 0}
+			<Svg pointerEvents={false}>
+				<LoadingOverlay {loadingRanges} />
+			</Svg>
+		{/if}
+
+		<!-- Hover/Focus indicators -->
+		<Svg pointerEvents={false}>
+			<defs>
+				<ClipPath id={hoverClipPathId} customPaddingLeft={0} customPaddingRight={0} />
+				<ClipPath
+					id={hoverClipPathAxisId}
+					customPaddingLeft={axisBufferLeft}
+					customPaddingRight={axisBufferRight}
+				/>
+			</defs>
+
+			<g clip-path={hoverClipPath}>
+				{#if isStepMode}
+					<!-- Step mode: band highlight like category charts -->
+					<StepHoverBand
+						dataset={chart.seriesScaledData}
+						hoverTime={chart.hoverTime}
+						focusTime={chart.focusTime}
+					/>
+				{:else}
+					<!-- Continuous mode: vertical line + dots -->
+					{#if chart.hoverData}
+						<LineX
+							xValue={chart.hoverData}
+							yValue={styles.showHoverYLine ? chart.hoverData : undefined}
+							maxYValue={hoverMaxY}
+							strokeArray="none"
+						/>
+						{#if styles.showHoverDot}
+							<Dot
+								domains={chart.visibleSeriesNames}
+								value={chart.hoverData}
+								isStacked={true}
+								colour="var(--su-chart-grid-strong, #333333)"
+								r={4}
+							/>
+						{/if}
+					{/if}
+
+					{#if chart.focusData}
+						<LineX
+							xValue={chart.focusData}
+							yValue={styles.showFocusYLine ? chart.focusData : undefined}
+							maxYValue={focusMaxY}
+							strokeArray="none"
+							strokeColour={styles.focusYLineStrokeColour}
+						/>
+						{#if styles.showFocusDot}
+							<Dot
+								domains={chart.visibleSeriesNames}
+								value={chart.focusData}
+								isStacked={true}
+								colour={styles.focusYLineDotColour}
+								r={styles.focusYLineDotRadius}
+							/>
+						{/if}
+					{/if}
+				{/if}
+			</g>
+		</Svg>
+
+		<!-- Axes -->
+		<Svg pointerEvents={false}>
+			<defs>
+				<ClipPath id={axesClipPathId} customPaddingLeft={0} customPaddingRight={0} />
+				<ClipPath
+					id={axesClipPathAxisId}
+					customPaddingLeft={axisBufferLeft}
+					customPaddingRight={axisBufferRight}
+				/>
+			</defs>
+			<g clip-path={axesClipPath}>
+				<AxisY
+					ticks={yTicksWhenEmpty}
+					formatTick={chart.useFormatY
+						? chart.formatY
+						: chart.chartOptions.isDataTransformTypeProportion
+							? (d: number) => d
+							: chart.convertAndFormatValue}
+					gridlines={true}
+					stroke={styles.yAxisStroke}
+					zeroValueStroke={styles.zeroValueStroke || styles.yAxisStroke}
+					showLastTick={styles.showLastYTick}
+					lastTickDy={styles.lastYTickDy}
+					yLabelStartPos={styles.yLabelStartPos}
+					xTick={tightAxisClip ? 8 : 0}
+					dxTick={styles.yLabelStartPos ? 6 : 0}
+					tickMarks={!!styles.yLabelStartPos}
+					{animate}
+				/>
+
+				<AxisX
+					ticks={chart.xTicks}
+					gridlineTicks={chart.xGridlineTicks}
+					highlightTicks={chart.xHighlightTicks}
+					mobileHiddenTicks={chart.xMobileHiddenTicks}
+					formatTick={chart.formatTickXWithTimeZone}
+					gridlines={styles.xGridlines}
+					tickMarks={true}
+					snapTicks={styles.snapTicks}
+					stroke={styles.xAxisStroke}
+					fill={styles.xAxisFill}
+					yTick={styles.xAxisYTick}
+					stepMode={isStepMode}
+					{animate}
+				/>
+			</g>
+		</Svg>
+	</LayerCake>
+</div>
+
+<style>
+	.su-stacked-area-chart {
+		width: 100%; /* w-full */
+	}
+</style>

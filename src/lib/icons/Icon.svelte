@@ -1,13 +1,15 @@
-<script lang="ts">
+<script lang="ts" module>
 	import type { Snippet } from 'svelte';
 	import type { SVGAttributes } from 'svelte/elements';
 
-	interface Props extends SVGAttributes<SVGSVGElement> {
+	export interface IconProps extends SVGAttributes<SVGSVGElement> {
 		size?: number | string;
 		children?: Snippet;
 	}
+</script>
 
-	let { size = 24, children, ...rest }: Props = $props();
+<script lang="ts">
+	let { size = 24, children, ...rest }: IconProps = $props();
 </script>
 
 <!-- Icon path data vendored from Lucide (https://lucide.dev), ISC licence. -->

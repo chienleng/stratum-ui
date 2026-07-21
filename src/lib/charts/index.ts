@@ -11,6 +11,25 @@ export { default as ChartOptions } from './ChartOptions.svelte.js';
 export { default as ChartStyles } from './ChartStyles.svelte.js';
 export { default as ChartTooltips } from './ChartTooltips.svelte.js';
 
+// Components
+export { default as StratumChart } from './StratumChart.svelte';
+export { default as StackedAreaChart } from './StackedAreaChart.svelte';
+export { default as GroupedBarChart } from './GroupedBarChart.svelte';
+export { default as BarChart } from './BarChart.svelte';
+export { default as MiniCharts } from './MiniCharts.svelte';
+export { default as ChartHeader } from './ChartHeader.svelte';
+export { default as ChartTooltip } from './ChartTooltip.svelte';
+export { default as ChartTooltipCompactStrip } from './ChartTooltipCompactStrip.svelte';
+export { default as ChartTooltipCompactCard } from './ChartTooltipCompactCard.svelte';
+export { default as ChartTooltipFloating } from './ChartTooltipFloating.svelte';
+export { default as ChartControls } from './ChartControls.svelte';
+export { default as ChartZoomControls } from './ChartZoomControls.svelte';
+export { default as ChartResizeHandle } from './ChartResizeHandle.svelte';
+
+// Brush and interval components
+export { default as DateBrush } from './DateBrush.svelte';
+export { default as IntervalSelector } from './IntervalSelector.svelte';
+
 // Presets
 export {
 	powerChartPreset,
@@ -85,7 +104,16 @@ export type {
 	YReferenceLine
 } from './types.js';
 
-// TODO(phase 5): component exports — StratumChart, StackedAreaChart,
-// GroupedBarChart, BarChart, ChartHeader, ChartTooltip, ChartControls,
-// DateBrush, IntervalSelector + elements re-exports.
+// Chart elements re-exported for convenience (also at stratum-ui/charts/elements)
+export {
+	StackedArea,
+	Line,
+	LoadingOverlay,
+	AxisX,
+	AxisY,
+	LineX,
+	Dot,
+	ClipPath
+} from './elements/index.js';
+
 // TODO(phase 8): ChartDataManager, ChartRangeBar.
