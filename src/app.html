@@ -9,9 +9,9 @@
 			// Set the theme before first paint to avoid a flash of the wrong theme.
 			(function () {
 				var saved = localStorage.getItem('su-theme');
-				document.documentElement.dataset.theme = ['neutral', 'furrow'].includes(saved)
+				document.documentElement.dataset.theme = ['openelectricity', 'furrow'].includes(saved)
 					? saved
-					: 'openelectricity';
+					: 'neutral';
 			})();
 		</script>
 		%sveltekit.head%

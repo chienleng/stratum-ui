@@ -2,7 +2,7 @@ export type ThemeName = 'openelectricity' | 'neutral' | 'furrow';
 
 const THEMES: ThemeName[] = ['openelectricity', 'neutral', 'furrow'];
 
-let current = $state<ThemeName>('openelectricity');
+let current = $state<ThemeName>('neutral');
 
 /**
  * Showcase theme state. The inline script in app.html sets `data-theme`
