@@ -34,8 +34,10 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// The showcase deploys at the domain root; resolve() would also break
+			// type-checking for routes that are added page-by-page during buildout.
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );
