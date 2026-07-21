@@ -1,0 +1,46 @@
+/**
+ * Compute the Y domain [min, max] from series data with min/max values.
+ * Uses reduce instead of Math.max(...spread) to avoid stack overflow on large datasets.
+ *
+ * @param data - Array of data points with _min and _max fields
+ * @param options - Options (`padding` is the fractional padding to add, default 10%)
+ * @returns The [min, max] Y domain
+ */
+export function computeYDomain(
+	data: Array<Record<string, any>> | null | undefined,
+	options: { padding?: number } = {}
+): [number, number] {
+	const { padding = 0.1 } = options;
+
+	if (!data || data.length === 0) return [0, 0];
+
+	let datasetMax = -Infinity;
+	let datasetMin = Infinity;
+
+	for (const d of data) {
+		const max = d._max ?? 0;
+		const min = d._min ?? 0;
+		if (max > datasetMax) datasetMax = max;
+		if (min < datasetMin) datasetMin = min;
+	}
+
+	if (datasetMin === Infinity) datasetMin = 0;
+
+	// Stacked/area charts draw from a zero baseline — when every value is
+	// negative the maxima sit below zero, which would push the zero line off
+	// the top of the plot. Anchor the top at 0 so the baseline stays visible
+	// (this also normalises the -Infinity no-data sentinel).
+	if (datasetMax < 0) datasetMax = 0;
+
+	const paddedMax = datasetMax + datasetMax * padding;
+	const paddedMin = datasetMin < 0 ? datasetMin + datasetMin * padding : datasetMin;
+
+	// For sub-unit data (|v| < 1) `Math.floor` / `Math.ceil` collapse the
+	// domain to integers — e.g. a max of 0.0017 kg ceils to 1 kg, which then
+	// squashes the actual values against the baseline. Keep the padded
+	// fractional value when the magnitude is already below 1.
+	const ceilMax = Math.abs(paddedMax) >= 1 ? Math.ceil(paddedMax) : paddedMax;
+	const floorMin = Math.abs(paddedMin) >= 1 ? Math.floor(paddedMin) : paddedMin;
+
+	return [floorMin, ceilMax];
+}

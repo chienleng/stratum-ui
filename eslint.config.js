@@ -39,5 +39,14 @@ export default defineConfig(
 			// type-checking for routes that are added page-by-page during buildout.
 			'svelte/no-navigation-without-resolve': 'off'
 		}
+	},
+	{
+		// The chart system is ported 1:1 from openelectricity's JSDoc source,
+		// which is deliberately dynamic where it meets d3/LayerCake (accessors,
+		// scales, rows). Faithful `any`s are kept there rather than refactored.
+		files: ['src/lib/charts/**'],
+		rules: {
+			'@typescript-eslint/no-explicit-any': 'off'
+		}
 	}
 );

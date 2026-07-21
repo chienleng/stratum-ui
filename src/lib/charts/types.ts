@@ -64,6 +64,20 @@ export interface ChartStylesConfig {
 	chartPadding?: ChartPadding;
 	/** X-axis Y offset for ticks */
 	xAxisYTick?: number;
+	/** Show x-axis gridlines */
+	xGridlines?: boolean;
+	/** Snap first/last tick labels inwards */
+	snapTicks?: boolean;
+	/** X-axis line stroke colour */
+	xAxisStroke?: string;
+	/** Y-axis line stroke colour */
+	yAxisStroke?: string;
+	/** Zero-line stroke colour */
+	zeroValueStroke?: string;
+	/** Y-axis label start position */
+	yLabelStartPos?: number | null;
+	/** Chart overlay background fill */
+	chartOverlayBgFill?: string;
 }
 
 /** Configuration for initialising a chart. */
@@ -89,7 +103,84 @@ export interface ChartConfig {
 	/** Hide chart type selector in UI */
 	hideChartTypeOptions?: boolean;
 	/** Custom style overrides */
-	styles?: ChartStylesConfig;
+	chartStyles?: ChartStylesConfig;
+}
+
+/** Rect annotation at data coordinates. */
+export interface AnnotationRect {
+	type: 'rect';
+	/** X position in data coordinates */
+	x: Date | number;
+	/** Y position in data coordinates */
+	y: number;
+	/** Width in pixels */
+	width: number;
+	/** Height in pixels */
+	height: number;
+	fill?: string;
+	stroke?: string;
+	strokeWidth?: number;
+	opacity?: number;
+	/** Corner radius */
+	rx?: number;
+}
+
+/** Circle annotation at data coordinates. */
+export interface AnnotationCircle {
+	type: 'circle';
+	/** Centre X in data coordinates */
+	x: Date | number;
+	/** Centre Y in data coordinates */
+	y: number;
+	/** Radius in pixels */
+	r: number;
+	fill?: string;
+	stroke?: string;
+	strokeWidth?: number;
+	opacity?: number;
+}
+
+/** Line annotation at data coordinates. */
+export interface AnnotationLine {
+	type: 'line';
+	x1: Date | number;
+	y1: number;
+	x2: Date | number;
+	y2: number;
+	stroke?: string;
+	strokeWidth?: number;
+	strokeDasharray?: string;
+	opacity?: number;
+}
+
+/** Text annotation at data coordinates. */
+export interface AnnotationText {
+	type: 'text';
+	x: Date | number;
+	y: number;
+	text: string;
+	/** Horizontal offset in pixels */
+	dx?: number;
+	/** Vertical offset in pixels */
+	dy?: number;
+	/** Rotation angle in degrees */
+	rotate?: number;
+	fill?: string;
+	/** Font size (e.g. '12px') */
+	fontSize?: string;
+	fontWeight?: string;
+	textAnchor?: 'start' | 'middle' | 'end';
+	dominantBaseline?: string;
+	opacity?: number;
+}
+
+export type Annotation = AnnotationRect | AnnotationCircle | AnnotationLine | AnnotationText;
+
+/** Horizontal reference line. */
+export interface YReferenceLine {
+	value: number;
+	label?: string;
+	colour?: string;
 }
 
 /** Hover/focus state for a data point. */

@@ -1,0 +1,51 @@
+/**
+ * Pure helpers for mapping raw `WheelEvent` deltas to pan/zoom semantics.
+ *
+ * Extracted from `InteractionLayer.svelte` so the math is unit-testable
+ * without a DOM. The component calls these, then fires the resulting
+ * `onpan(deltaMs)` / `onzoom(factor, centerMs)` callbacks.
+ */
+
+/** Tuned so a typical trackpad zoom feels natural at 1 wheel tick ≈ 1.002 factor. */
+const ZOOM_BASE = 1.002;
+
+/**
+ * Idle gap (ms) after the last wheel event before a wheel pan stream counts as
+ * ended (InteractionLayer fires `onpanend`). viewport-gestures derives its
+ * wheel settle debounce from this so `onpanend` always wins for wheel pans —
+ * keep the relationship structural, not two hand-synced literals.
+ */
+export const WHEEL_PAN_IDLE_MS = 150;
+
+/**
+ * Decide whether a wheel event should pan or zoom based on which axis is
+ * stronger. Ties go to zoom (vertical scroll is the common default on mice
+ * without a horizontal wheel).
+ */
+export function classifyWheelIntent(deltaX: number, deltaY: number): 'pan' | 'zoom' {
+	return Math.abs(deltaX) > Math.abs(deltaY) ? 'pan' : 'zoom';
+}
+
+/**
+ * Map a horizontal wheel delta to a viewport pan in milliseconds. Right-scroll
+ * (positive deltaX) advances forward in time, so we negate the delta.
+ *
+ * @param deltaX - Raw `WheelEvent.deltaX`
+ * @param widthPx - Container width in pixels
+ * @param domainMs - Current viewport duration in ms (end - start)
+ * @returns Pan delta in ms (positive = future → past, negative = past → future)
+ */
+export function wheelPanDeltaMs(deltaX: number, widthPx: number, domainMs: number): number {
+	if (!widthPx || widthPx <= 0) return 0;
+	if (!Number.isFinite(domainMs) || domainMs <= 0) return 0;
+	const msPerPixel = domainMs / widthPx;
+	return -deltaX * msPerPixel;
+}
+
+/**
+ * Map a vertical wheel delta to a zoom factor. Scrolling up (negative deltaY)
+ * zooms in (factor > 1); scrolling down zooms out (factor < 1).
+ */
+export function wheelZoomFactor(deltaY: number): number {
+	return Math.pow(ZOOM_BASE, -deltaY);
+}
