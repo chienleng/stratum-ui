@@ -1,0 +1,594 @@
+<script lang="ts">
+	/**
+	 * InteractionLayer
+	 *
+	 * Unified interaction handler for chart gestures. Wraps chart content in a
+	 * div and handles all pointer interactions at the HTML level, avoiding SVG
+	 * layer stacking issues.
+	 *
+	 * Mouse:  hover, click to focus, drag to pan, wheel to zoom
+	 * Touch:  1-finger drag → hover, 1-finger tap → focus,
+	 *         2-finger drag → pan, 2-finger pinch → zoom
+	 *
+	 * Exposes `interactionMode` (bindable) so the parent can suppress
+	 * SVG-level interactions (e.g. StackedArea series hover) during pan/zoom.
+	 */
+
+	import type { Snippet } from 'svelte';
+	import type ChartStore from '../ChartStore.svelte.js';
+	import {
+		classifyWheelIntent,
+		wheelPanDeltaMs,
+		wheelZoomFactor,
+		WHEEL_PAN_IDLE_MS
+	} from '../wheel-interaction.js';
+
+	type InteractionMode = 'none' | 'hover' | 'mouse-pan' | 'touch-pan';
+
+	interface Props {
+		/** Chart store for hover/focus state */
+		chart: ChartStore;
+		/** Enable pan/zoom gestures */
+		enablePan?: boolean;
+		/**
+		 * 'always' (default) keeps pan/zoom active whenever `enablePan` is true.
+		 * 'tap-to-engage' gates pan/zoom behind the bindable `engaged` flag —
+		 * the first tap engages instead of toggling focus.
+		 */
+		panZoomMode?: 'always' | 'tap-to-engage';
+		/** Bindable engagement state for tap-to-engage mode. */
+		engaged?: boolean;
+		/** Explicit time domain (category charts) */
+		viewDomain?: [number, number] | null;
+		/** Current mode (bindable) */
+		interactionMode?: InteractionMode;
+		onhover?: (time: number, key?: string) => void;
+		onhoverend?: () => void;
+		onfocus?: (time: number) => void;
+		onpanstart?: () => void;
+		onpan?: (deltaMs: number) => void;
+		onpanend?: () => void;
+		onzoom?: (factor: number, centerMs: number) => void;
+		/**
+		 * Fired (throttle-free, passive) when a wheel gesture lands on a
+		 * tap-to-engage chart that isn't engaged — the page keeps scrolling,
+		 * but the consumer can surface a "click to enable pan & zoom" hint at
+		 * the point of intent.
+		 */
+		onblockedwheel?: () => void;
+		children?: Snippet;
+	}
+
+	let {
+		chart,
+		enablePan = false,
+		panZoomMode = 'always',
+		engaged = $bindable(false),
+		viewDomain = null,
+		interactionMode = $bindable('none'),
+		onhover,
+		onhoverend,
+		onfocus,
+		onpanstart,
+		onpan,
+		onpanend,
+		onzoom,
+		onblockedwheel,
+		children
+	}: Props = $props();
+
+	let effectiveEnablePan = $derived(enablePan && (panZoomMode === 'always' || engaged));
+
+	let el = $state<HTMLDivElement | undefined>(undefined);
+
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- deliberately non-reactive pointer cache
+	let pointers = new Map<number, { clientX: number; clientY: number }>();
+
+	// Pan state
+	let panLastX = 0;
+	let panMsPerPx = 0;
+	let panRafId = $state<number | null>(null);
+	let panPendingX = 0;
+
+	// Pinch state
+	let pinchPrevDist = 0;
+	let pinchRafId = $state<number | null>(null);
+	let pinchPendingFactor = 1;
+	let pinchPendingCenterMs = 0;
+
+	// Tap/drag detection
+	let tapStartX = 0;
+	let tapStartY = 0;
+	const TAP_THRESHOLD = 8;
+	const PAN_THRESHOLD = 3;
+
+	// ---- Coordinate mapping ----
+
+	/**
+	 * Cached wrapper rect — `getBoundingClientRect()` forces a layout read, too
+	 * expensive per mousemove/wheel event. Refreshed on pointer entry/downs,
+	 * element resize, and scroll while hovered.
+	 */
+	let cachedRect: DOMRect | null = null;
+
+	function refreshRect() {
+		cachedRect = el ? el.getBoundingClientRect() : null;
+	}
+
+	function getRect() {
+		if (!cachedRect || cachedRect.width === 0) refreshRect();
+		return cachedRect;
+	}
+
+	function getTimeDomain(): [number, number] | null {
+		if (viewDomain) return viewDomain;
+		// `renderXDomain` is `xDomain` extended for step mode; using it here
+		// keeps pointer→time in sync with the LayerCake `$xScale`.
+		const xd = chart.renderXDomain;
+		if (xd && xd.length === 2) return [Number(xd[0]), Number(xd[1])];
+		// Fall back to data time range
+		const data = chart.seriesScaledData;
+		if (data?.length >= 2) {
+			return [data[0].time, data[data.length - 1].time];
+		}
+		return null;
+	}
+
+	/** Convert clientX to time, accounting for LayerCake chart padding. */
+	function clientXToTime(clientX: number): number {
+		const domain = getTimeDomain();
+		if (!domain) return 0;
+		const rect = getRect();
+		if (!rect || rect.width === 0) return domain[0];
+
+		const pad = chart.chartStyles.chartPadding;
+		const drawLeft = rect.left + (pad.left || 0);
+		const drawWidth = rect.width - (pad.left || 0) - (pad.right || 0);
+		if (drawWidth <= 0) return domain[0];
+
+		const ratio = Math.max(0, Math.min(1, (clientX - drawLeft) / drawWidth));
+		return domain[0] + ratio * (domain[1] - domain[0]);
+	}
+
+	/**
+	 * Snap a raw time to the nearest data point.
+	 * Uses floor semantics for step curves (curveStepAfter: value at T covers
+	 * [T, T+I)), closest-match otherwise.
+	 */
+	function snapTime(rawTime: number): number {
+		const data = chart.seriesScaledData;
+		if (!data?.length) return rawTime;
+
+		const isStep = chart.chartOptions.selectedCurveType === 'step';
+
+		if (isStep) {
+			let found = data[0].time;
+			for (const d of data) {
+				if (d.time <= rawTime) found = d.time;
+				else break;
+			}
+			return found;
+		}
+
+		// Binary search for closest time
+		let lo = 0;
+		let hi = data.length - 1;
+		while (lo < hi) {
+			const mid = (lo + hi) >> 1;
+			if (data[mid].time < rawTime) lo = mid + 1;
+			else hi = mid;
+		}
+		if (lo > 0) {
+			const prev = data[lo - 1].time;
+			const curr = data[lo].time;
+			if (Math.abs(prev - rawTime) < Math.abs(curr - rawTime)) return prev;
+		}
+		return data[lo].time;
+	}
+
+	function captureMsPerPx() {
+		const domain = getTimeDomain();
+		const rect = getRect();
+		if (domain && rect && rect.width > 0) {
+			const pad = chart.chartStyles.chartPadding;
+			const drawWidth = rect.width - (pad.left || 0) - (pad.right || 0);
+			if (drawWidth > 0) {
+				panMsPerPx = (domain[1] - domain[0]) / drawWidth;
+			}
+		}
+	}
+
+	function pinchDistance(
+		a: { clientX: number; clientY: number },
+		b: { clientX: number; clientY: number }
+	): number {
+		const dx = a.clientX - b.clientX;
+		const dy = a.clientY - b.clientY;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	// ---- rAF processors ----
+
+	function processPanFrame() {
+		panRafId = null;
+		const deltaMs = (panPendingX - panLastX) * panMsPerPx;
+		panLastX = panPendingX;
+		onpan?.(deltaMs);
+	}
+
+	function processPinchFrame() {
+		pinchRafId = null;
+		const factor = pinchPendingFactor;
+		const centerMs = pinchPendingCenterMs;
+		pinchPendingFactor = 1;
+		onzoom?.(factor, centerMs);
+	}
+
+	// ---- Pointer handlers ----
+
+	function handlePointerDown(event: PointerEvent) {
+		if (!enablePan) return;
+		refreshRect();
+
+		// --- Touch ---
+		if (event.pointerType === 'touch') {
+			pointers.set(event.pointerId, {
+				clientX: event.clientX,
+				clientY: event.clientY
+			});
+
+			if (pointers.size === 1) {
+				tapStartX = event.clientX;
+				tapStartY = event.clientY;
+				interactionMode = 'hover';
+
+				window.addEventListener('pointermove', handlePointerMove);
+				window.addEventListener('pointerup', handlePointerUp);
+				window.addEventListener('pointercancel', handlePointerCancel);
+			}
+
+			if (pointers.size === 2) {
+				if (interactionMode === 'hover') {
+					chart.clearHover();
+					onhoverend?.();
+				}
+				interactionMode = 'touch-pan';
+				onpanstart?.();
+
+				const [a, b] = [...pointers.values()];
+				pinchPrevDist = pinchDistance(a, b);
+				captureMsPerPx();
+				panLastX = (a.clientX + b.clientX) / 2;
+			}
+			return;
+		}
+
+		// --- Mouse: left-button drag to pan ---
+		if (event.button !== 0) return;
+
+		tapStartX = event.clientX;
+		panLastX = event.clientX;
+		interactionMode = 'none'; // becomes 'mouse-pan' after threshold
+		captureMsPerPx();
+
+		window.addEventListener('pointermove', handlePointerMove);
+		window.addEventListener('pointerup', handlePointerUp);
+	}
+
+	function handlePointerMove(event: PointerEvent) {
+		if (pointers.has(event.pointerId)) {
+			pointers.set(event.pointerId, {
+				clientX: event.clientX,
+				clientY: event.clientY
+			});
+		}
+
+		// Touch 1-finger hover
+		if (interactionMode === 'hover' && pointers.size === 1) {
+			const time = snapTime(clientXToTime(event.clientX));
+			// Same snapped bucket — skip the store write and parent fan-out.
+			if (time !== chart.hoverTime) {
+				chart.setHover(time);
+				onhover?.(time);
+			}
+			return;
+		}
+
+		// Touch 2-finger pan + pinch
+		if (interactionMode === 'touch-pan' && pointers.size === 2) {
+			event.preventDefault();
+			const [a, b] = [...pointers.values()];
+
+			// Pinch
+			const newDist = pinchDistance(a, b);
+			if (pinchPrevDist > 0 && newDist > 0) {
+				const midX = (a.clientX + b.clientX) / 2;
+				pinchPendingFactor *= newDist / pinchPrevDist;
+				pinchPendingCenterMs = clientXToTime(midX);
+				if (pinchRafId === null) {
+					pinchRafId = requestAnimationFrame(processPinchFrame);
+				}
+			}
+			pinchPrevDist = newDist;
+
+			// Pan
+			const midX = (a.clientX + b.clientX) / 2;
+			panPendingX = midX;
+			if (panRafId === null) {
+				panRafId = requestAnimationFrame(processPanFrame);
+			}
+			return;
+		}
+
+		// Mouse drag pan
+		if (event.pointerType !== 'touch') {
+			const dx = Math.abs(event.clientX - tapStartX);
+
+			if (interactionMode === 'none' && dx > PAN_THRESHOLD) {
+				interactionMode = 'mouse-pan';
+				chart.clearHover();
+				onpanstart?.();
+			}
+
+			if (interactionMode === 'mouse-pan') {
+				event.preventDefault();
+				panPendingX = event.clientX;
+				if (panRafId === null) {
+					panRafId = requestAnimationFrame(processPanFrame);
+				}
+			}
+		}
+	}
+
+	function handlePointerUp(event: PointerEvent) {
+		// Touch tap detection
+		if (interactionMode === 'hover' && pointers.size === 1) {
+			const dx = Math.abs(event.clientX - tapStartX);
+			const dy = Math.abs(event.clientY - tapStartY);
+
+			if (dx < TAP_THRESHOLD && dy < TAP_THRESHOLD) {
+				const time = snapTime(clientXToTime(event.clientX));
+				if (onfocus) onfocus(time);
+				else chart.toggleFocus(time);
+			}
+
+			chart.clearHover();
+			onhoverend?.();
+		}
+
+		pointers.delete(event.pointerId);
+
+		if (pointers.size === 0) {
+			cleanup();
+		}
+	}
+
+	function handlePointerCancel(event: PointerEvent) {
+		pointers.delete(event.pointerId);
+		if (pointers.size === 0) {
+			cleanup();
+		}
+	}
+
+	function cleanup() {
+		window.removeEventListener('pointermove', handlePointerMove);
+		window.removeEventListener('pointerup', handlePointerUp);
+		window.removeEventListener('pointercancel', handlePointerCancel);
+
+		if (panRafId !== null) {
+			cancelAnimationFrame(panRafId);
+			panRafId = null;
+		}
+		if (pinchRafId !== null) {
+			cancelAnimationFrame(pinchRafId);
+			pinchRafId = null;
+		}
+
+		if (interactionMode === 'mouse-pan' || interactionMode === 'touch-pan') {
+			onpanend?.();
+		}
+
+		interactionMode = 'none';
+		pinchPrevDist = 0;
+		pinchPendingFactor = 1;
+		pointers.clear();
+	}
+
+	// ---- Mouse hover/click (non-drag) ----
+
+	function handleMouseMove(event: MouseEvent) {
+		if (interactionMode !== 'none') return;
+		const time = snapTime(clientXToTime(event.clientX));
+		// Same snapped bucket as the current hover — nothing to update.
+		if (time === chart.hoverTime) return;
+		chart.setHover(time);
+		onhover?.(time);
+	}
+
+	function handleScrollWhileHovered() {
+		// Invalidate only — getRect() refreshes lazily on the next pointer use,
+		// so momentum scrolling costs zero layout reads.
+		cachedRect = null;
+	}
+
+	function handleMouseEnter() {
+		refreshRect();
+		// Scroll doesn't bubble — capture catches ancestor scroll containers too.
+		window.addEventListener('scroll', handleScrollWhileHovered, { passive: true, capture: true });
+	}
+
+	function handleMouseLeave() {
+		window.removeEventListener('scroll', handleScrollWhileHovered, { capture: true });
+		if (interactionMode !== 'none') return;
+		chart.clearHover();
+		onhoverend?.();
+	}
+
+	function handleClick(event: MouseEvent) {
+		if (interactionMode !== 'none') return;
+		// StackedArea handles clicks on SVG paths via onpointerup — skip to avoid double-toggle
+		const target = event.target as Element;
+		if (target.tagName === 'path') return;
+
+		// First tap in tap-to-engage mode engages pan/zoom instead of setting focus.
+		if (panZoomMode === 'tap-to-engage' && !engaged) {
+			engaged = true;
+			return;
+		}
+
+		const time = snapTime(clientXToTime(event.clientX));
+		if (onfocus) onfocus(time);
+		else chart.toggleFocus(time);
+	}
+
+	// ---- Wheel (pan/zoom) ----
+
+	let wheelPanEndTimeout: ReturnType<typeof setTimeout> | null = null;
+	let wheelRafId: number | null = null;
+	let wheelPendingPanMs = 0;
+	let wheelPendingZoomFactor = 1;
+	let wheelPendingZoomCenterMs = 0;
+
+	// Trackpads emit wheel events well above the display refresh rate, and each
+	// onpan/onzoom triggers the consumer's full slice/aggregate/render cascade.
+	// Accumulate intents (deltas sum, factors multiply — same maths as the pinch
+	// processor) and flush once per frame, mirroring the pointer rAF machinery.
+	function processWheelFrame() {
+		wheelRafId = null;
+		if (wheelPendingPanMs !== 0) {
+			const deltaMs = wheelPendingPanMs;
+			wheelPendingPanMs = 0;
+			onpan?.(deltaMs);
+		}
+		if (wheelPendingZoomFactor !== 1) {
+			const factor = wheelPendingZoomFactor;
+			wheelPendingZoomFactor = 1;
+			onzoom?.(factor, wheelPendingZoomCenterMs);
+		}
+	}
+
+	function scheduleWheelFrame() {
+		wheelRafId ??= requestAnimationFrame(processWheelFrame);
+	}
+
+	/**
+	 * Horizontal scroll pans the viewport; vertical scroll zooms at the
+	 * cursor. Fires the same onpan/onzoom callbacks as pointer gestures, so
+	 * consumers get wheel support for free.
+	 */
+	function handleWheel(event: WheelEvent) {
+		if (!effectiveEnablePan) return;
+		if (interactionMode !== 'none') return;
+		if (!onpan && !onzoom) return;
+
+		const rect = getRect();
+		if (!rect || rect.width === 0) return;
+
+		const domain = getTimeDomain();
+		if (!domain) return;
+
+		event.preventDefault();
+
+		const intent = classifyWheelIntent(event.deltaX, event.deltaY);
+
+		if (intent === 'pan') {
+			if (!onpan) return;
+			wheelPendingPanMs += wheelPanDeltaMs(event.deltaX, rect.width, domain[1] - domain[0]);
+			scheduleWheelFrame();
+
+			// The end-of-stream timeout far outlives the pending rAF, so the final
+			// pan delta always flushes before onpanend fires.
+			if (wheelPanEndTimeout) clearTimeout(wheelPanEndTimeout);
+			wheelPanEndTimeout = setTimeout(() => {
+				wheelPanEndTimeout = null;
+				onpanend?.();
+			}, WHEEL_PAN_IDLE_MS);
+			return;
+		}
+
+		if (!onzoom) return;
+		// A pan→zoom transition within one wheel stream is one gesture — keep
+		// deferring the pending pan-end so it doesn't fire mid-zoom, an idle gap
+		// after the *pan* stopped. It fires once the whole stream goes quiet.
+		if (wheelPanEndTimeout) {
+			clearTimeout(wheelPanEndTimeout);
+			wheelPanEndTimeout = setTimeout(() => {
+				wheelPanEndTimeout = null;
+				onpanend?.();
+			}, WHEEL_PAN_IDLE_MS);
+		}
+		wheelPendingZoomFactor *= wheelZoomFactor(event.deltaY);
+		wheelPendingZoomCenterMs = clientXToTime(event.clientX);
+		scheduleWheelFrame();
+	}
+
+	// ---- Lifecycle ----
+
+	// Keep the cached rect fresh across element/layout resizes (split-pane
+	// drags, chart resize handle) independent of pan being enabled.
+	$effect(() => {
+		const target = el;
+		if (!target) return;
+		const observer = new ResizeObserver(() => {
+			cachedRect = null;
+		});
+		observer.observe(target);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('scroll', handleScrollWhileHovered, { capture: true });
+		};
+	});
+
+	$effect(() => {
+		const target = el;
+		if (!target || !effectiveEnablePan) return;
+
+		target.addEventListener('pointerdown', handlePointerDown);
+		// Wheel needs `{ passive: false }` so we can preventDefault().
+		target.addEventListener('wheel', handleWheel, { passive: false });
+
+		return () => {
+			target.removeEventListener('pointerdown', handlePointerDown);
+			target.removeEventListener('wheel', handleWheel);
+			if (wheelPanEndTimeout) {
+				clearTimeout(wheelPanEndTimeout);
+				wheelPanEndTimeout = null;
+			}
+			if (wheelRafId !== null) {
+				cancelAnimationFrame(wheelRafId);
+				wheelRafId = null;
+				wheelPendingPanMs = 0;
+				wheelPendingZoomFactor = 1;
+			}
+			cleanup();
+		};
+	});
+
+	// While a tap-to-engage chart sits idle, no pan/zoom listeners are attached
+	// (the effect above gates on effectiveEnablePan) and a wheel gesture just
+	// scrolls the page — silently, at the exact moment the user wants to zoom.
+	// A passive listener (never preventDefault — the scroll must continue)
+	// notifies the consumer so it can show a "click to enable" hint in place.
+	$effect(() => {
+		const target = el;
+		if (!target || !onblockedwheel) return;
+		if (!enablePan || panZoomMode !== 'tap-to-engage' || engaged) return;
+
+		const notify = () => onblockedwheel();
+		target.addEventListener('wheel', notify, { passive: true });
+		return () => target.removeEventListener('wheel', notify);
+	});
+</script>
+
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	bind:this={el}
+	style:touch-action={effectiveEnablePan ? 'none' : undefined}
+	onmouseenter={handleMouseEnter}
+	onmousemove={handleMouseMove}
+	onmouseleave={handleMouseLeave}
+	onclick={handleClick}
+>
+	{@render children?.()}
+</div>

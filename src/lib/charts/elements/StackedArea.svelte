@@ -1,0 +1,388 @@
+<script lang="ts">
+	/**
+	 * StackedArea Component
+	 *
+	 * Renders stacked area or line charts with optional highlighting.
+	 * Supports mouse interactions for identifying hovered series.
+	 * Supports different colors for positive/negative regions via clip paths.
+	 *
+	 * Colours are applied via `style:` directives so `var(--su-…)` references
+	 * and `color-mix()` values resolve — SVG presentation attributes don't.
+	 */
+	import { area, line, curveLinear, type CurveFactory } from 'd3-shape';
+	import { closestTo } from 'date-fns';
+	import { getLayerCake } from './layercake-context.js';
+	import type { SeriesRow } from '../types.js';
+
+	// Rows here are d3-stack series objects (key/values), not SeriesRows.
+
+	const { data, xGet, xScale, yScale, yGet, z, width, height } = getLayerCake<any>();
+
+	type DisplayType = 'stacked-area' | 'line';
+
+	interface Props {
+		/** Raw dataset for event lookups */
+		dataset?: SeriesRow[];
+		/** Chart display type */
+		display?: DisplayType;
+		/** D3 curve type */
+		curveType?: CurveFactory;
+		/** Map of series id to colour (hex or var(--su-…) reference) */
+		seriesColours?: Record<string, string>;
+		/** Currently highlighted series id */
+		highlightId?: string | null;
+		/** Line stroke width */
+		strokeWidth?: string;
+		/** Show dots on line chart */
+		showLineDots?: boolean;
+		/** Dot radius */
+		dotRadius?: number;
+		/** Dot fill colour override */
+		dotFill?: string;
+		/** Dot stroke colour override */
+		dotStroke?: string;
+		/** Dot stroke width */
+		dotStrokeWidth?: string;
+		/** Use lighter colour for negative values */
+		lighterNegative?: boolean;
+		/**
+		 * For line charts: the y-value band [min, max] within which the line
+		 * stays solid; outside it (e.g. a non-linear scale's log tails) the
+		 * line is drawn dotted.
+		 */
+		solidLineRange?: [number, number];
+		/** Use floor-based data-point lookup for step curves (value at T covers [T, T+I)) */
+		stepMode?: boolean;
+		/** Animate paths: grow from y=0 on mount, morph on data change */
+		animate?: boolean;
+		onmousemove?: (evt: { data: SeriesRow; key?: string }) => void;
+		onmouseout?: () => void;
+		onpointerup?: (data: SeriesRow) => void;
+	}
+
+	let {
+		dataset = [],
+		display = 'stacked-area',
+		curveType = curveLinear,
+		seriesColours = {},
+		highlightId = null,
+		strokeWidth = '1.5',
+		showLineDots = false,
+		dotRadius = 3,
+		dotFill = undefined,
+		dotStroke = undefined,
+		dotStrokeWidth = '1px',
+		lighterNegative = false,
+		solidLineRange = undefined,
+		stepMode = false,
+		animate = false,
+		onmousemove,
+		onmouseout,
+		onpointerup
+	}: Props = $props();
+
+	// Track whether we've rendered data once — CSS d transitions only after first paint
+	let canTransition = $state(false);
+
+	$effect(() => {
+		if (animate && $data.length > 0 && !canTransition) {
+			setTimeout(() => {
+				canTransition = true;
+			}, 100);
+		}
+	});
+
+	// Unique ID for clip paths
+	let clipId = $derived(`area-clip-${Math.random().toString(36).slice(2, 9)}`);
+
+	// Y position of zero line
+	let zeroY = $derived($yScale(0));
+
+	/**
+	 * Get lighter colour for negative regions. Uses color-mix() rather than a
+	 * colour library so it also works when the base colour is a `var(--su-…)`
+	 * token reference (the value resolves in CSS, not JS).
+	 */
+	function getLighterColor(color: string): string {
+		return `color-mix(in srgb, ${color} 60%, white)`;
+	}
+
+	// Extract unique dates for event lookups
+	let compareDates = $derived([...new Set(dataset.map((d) => d.date))]);
+
+	// Area generator factory — creates a generator that checks the original row
+	// for null values so gaps render as breaks instead of drawing to 0.
+	function makeAreaGen(key: string) {
+		return area<any>()
+			.x((d) => $xGet(d))
+			.y0((d) => $yScale(d[0]))
+			.y1((d) => $yScale(d[1]))
+			.curve(curveType)
+			.defined((d) => {
+				if (isNaN(d[0]) || isNaN(d[1])) return false;
+				// d.data is the original row (D3 stack convention)
+				return d.data?.[key] != null;
+			});
+	}
+
+	// Line generator for line charts
+	let lineGen = $derived(
+		line<any>(
+			(d) => $xGet(d),
+			(d) => $yGet(d)
+		)
+			.curve(curveType)
+			.defined((d) => d.value !== null && !isNaN(d.value))
+	);
+
+	/**
+	 * Calculate opacity based on highlight state
+	 */
+
+	function getOpacity(d: any, normalOpacity: number, dimmedOpacity: number) {
+		if (!highlightId) return normalOpacity;
+		return highlightId === d.key || highlightId === d.group ? normalOpacity : dimmedOpacity;
+	}
+
+	/** Find closest data point by x position */
+	function findClosestDataPoint(evt: MouseEvent | TouchEvent): SeriesRow | undefined {
+		let offsetX = 0;
+
+		if ('offsetX' in evt) {
+			offsetX = evt.offsetX;
+		} else if ('touches' in evt && evt.touches.length > 0) {
+			const rect = (evt.target as Element).getBoundingClientRect();
+			offsetX = evt.touches[0].clientX - rect.left;
+		}
+
+		const xInvert = $xScale.invert?.(offsetX) ?? 0;
+
+		if (stepMode) {
+			// Floor-based: curveStepAfter puts y_i's bar over [T_i, T_{i+1}),
+			// so the last d with d.time <= cursor is the active bucket.
+			const cursorTime = new Date(xInvert).getTime();
+			let found: SeriesRow | undefined = undefined;
+			for (const d of dataset) {
+				if (d.time <= cursorTime) {
+					found = d;
+				} else {
+					break;
+				}
+			}
+			return found;
+		}
+
+		const closest = closestTo(new Date(xInvert), compareDates);
+
+		if (!closest) return undefined;
+
+		return dataset.find((d) => d.time === closest.getTime());
+	}
+
+	/** Handle pointer move with series key */
+	function handlePointerMove(evt: MouseEvent | TouchEvent, key: string) {
+		const item = findClosestDataPoint(evt);
+		if (item) {
+			onmousemove?.({ data: item, key });
+		}
+	}
+
+	/** Handle pointer up with series key */
+	function handlePointerUp(evt: MouseEvent | TouchEvent, _key: string) {
+		// Cmd/Ctrl+click is used for zoom — don't trigger focus
+		if ('metaKey' in evt && (evt.metaKey || evt.ctrlKey)) return;
+		const item = findClosestDataPoint(evt);
+		if (item) {
+			onpointerup?.(item);
+		}
+	}
+
+	/** Handle mouse out */
+	function handleMouseOut() {
+		onmouseout?.();
+	}
+</script>
+
+{#if display === 'line'}
+	<g class="line-group" role="group">
+		{#if solidLineRange}
+			<!-- Solid within the band, dotted in the tails: clip one copy of the line
+			     to the band's pixel range and a dotted copy to everything outside it.
+			     y grows downward, so the upper value maps to the smaller y. -->
+			{@const yTop = $yScale(solidLineRange[1])}
+			{@const yBot = $yScale(solidLineRange[0])}
+			<defs>
+				<clipPath id="{clipId}-solid">
+					<rect x="0" y={yTop} width={$width} height={Math.max(0, yBot - yTop)} />
+				</clipPath>
+				<clipPath id="{clipId}-dotted">
+					<rect x="0" y="0" width={$width} height={Math.max(0, yTop)} />
+					<rect x="0" y={yBot} width={$width} height={Math.max(0, $height - yBot)} />
+				</clipPath>
+			</defs>
+		{/if}
+
+		{#each $data as d, i (i)}
+			{@const seriesKey = d.key || d.group}
+			{@const path = lineGen(d.values)}
+			{@const stroke = seriesColours[$z(d)]}
+			{@const op = getOpacity(d, 1, 0.5)}
+
+			<!-- Optional dots for line chart -->
+			{#if showLineDots && d.values?.length > 1}
+				{#each d.values as point (point.time)}
+					<circle
+						class="line-dot"
+						role="presentation"
+						cx={$xGet(point)}
+						cy={$yGet(point)}
+						r={dotRadius}
+						style:fill={dotFill ?? null}
+						style:stroke={dotStroke ?? null}
+						stroke-width={dotStrokeWidth}
+						onmousemove={(e) => handlePointerMove(e, seriesKey)}
+						onmouseout={handleMouseOut}
+						ontouchmove={(e) => handlePointerMove(e, seriesKey)}
+						onblur={handleMouseOut}
+						onpointerup={(e) => handlePointerUp(e, seriesKey)}
+					/>
+				{/each}
+			{/if}
+
+			{#if solidLineRange}
+				<!-- Solid copy (clipped to the band) + dotted copy (clipped to the tails) -->
+				<path
+					class="path-line"
+					class:path-animate={canTransition}
+					role="presentation"
+					d={path}
+					fill="transparent"
+					style:stroke
+					stroke-width={strokeWidth}
+					opacity={op}
+					clip-path="url(#{clipId}-solid)"
+				/>
+				<path
+					class="path-line"
+					class:path-animate={canTransition}
+					role="presentation"
+					d={path}
+					fill="transparent"
+					style:stroke
+					stroke-width={strokeWidth}
+					stroke-dasharray="1 3"
+					stroke-linecap="round"
+					opacity={op}
+					clip-path="url(#{clipId}-dotted)"
+				/>
+			{:else}
+				<!-- Line path -->
+				<path
+					class="path-line"
+					class:path-animate={canTransition}
+					role="presentation"
+					d={path}
+					fill="transparent"
+					style:stroke
+					stroke-width={strokeWidth}
+					opacity={op}
+				/>
+			{/if}
+		{/each}
+	</g>
+{/if}
+
+{#if display === 'stacked-area'}
+	<!-- Clip path definitions for positive/negative regions -->
+	{#if lighterNegative}
+		<defs>
+			<!-- Clip path for positive region (y >= 0, which is y <= zeroY in SVG coords).
+			     Heights clamped: a custom y-domain excluding 0 puts zeroY off-plot. -->
+			<clipPath id="{clipId}-positive">
+				<rect x="0" y="0" width={$width} height={Math.max(0, zeroY)} />
+			</clipPath>
+			<!-- Clip path for negative region (y < 0, which is y > zeroY in SVG coords) -->
+			<clipPath id="{clipId}-negative">
+				<rect x="0" y={zeroY} width={$width} height={Math.max(0, $height - zeroY)} />
+			</clipPath>
+		</defs>
+	{/if}
+
+	<g class="area-group" role="group">
+		{#each $data as d, i (i)}
+			{@const seriesKey = d.key || d.group}
+			{@const baseColor = seriesColours[$z(d)]}
+
+			{#if lighterNegative}
+				<!-- Positive region (normal colour) -->
+				<path
+					class="path-area"
+					class:path-animate={canTransition}
+					role="presentation"
+					d={makeAreaGen(seriesKey)(d)}
+					style:fill={baseColor}
+					stroke="none"
+					opacity={getOpacity(d, 1, 0.65)}
+					clip-path="url(#{clipId}-positive)"
+					onmousemove={(e) => handlePointerMove(e, seriesKey)}
+					onmouseout={handleMouseOut}
+					ontouchmove={(e) => handlePointerMove(e, seriesKey)}
+					onblur={handleMouseOut}
+					onpointerup={(e) => handlePointerUp(e, seriesKey)}
+				/>
+				<!-- Negative region (lighter colour) -->
+				<path
+					class="path-area"
+					class:path-animate={canTransition}
+					role="presentation"
+					d={makeAreaGen(seriesKey)(d)}
+					style:fill={getLighterColor(baseColor)}
+					stroke="none"
+					opacity={getOpacity(d, 1, 0.65)}
+					clip-path="url(#{clipId}-negative)"
+					onmousemove={(e) => handlePointerMove(e, seriesKey)}
+					onmouseout={handleMouseOut}
+					ontouchmove={(e) => handlePointerMove(e, seriesKey)}
+					onblur={handleMouseOut}
+					onpointerup={(e) => handlePointerUp(e, seriesKey)}
+				/>
+			{:else}
+				<path
+					class="path-area"
+					class:path-animate={canTransition}
+					role="presentation"
+					d={makeAreaGen(seriesKey)(d)}
+					style:fill={baseColor}
+					stroke="none"
+					opacity={getOpacity(d, 1, 0.65)}
+					onmousemove={(e) => handlePointerMove(e, seriesKey)}
+					onmouseout={handleMouseOut}
+					ontouchmove={(e) => handlePointerMove(e, seriesKey)}
+					onblur={handleMouseOut}
+					onpointerup={(e) => handlePointerUp(e, seriesKey)}
+				/>
+			{/if}
+		{/each}
+	</g>
+{/if}
+
+<style>
+	.line-dot {
+		fill: var(--su-chart-surface, #ffffff);
+		stroke: var(--su-chart-annotation, #59636e);
+	}
+
+	.path-line {
+		pointer-events: none;
+	}
+
+	.path-line:focus,
+	.path-area:focus,
+	.line-dot:focus {
+		outline: none;
+	}
+
+	.path-animate {
+		transition: d 400ms ease-in-out;
+	}
+</style>
