@@ -116,4 +116,5 @@ export {
 	ClipPath
 } from './elements/index.js';
 
-// TODO(phase 8): ChartDataManager, ChartRangeBar.
+export { default as ChartDataManager } from './ChartDataManager.svelte.js';
+export { default as ChartRangeBar, type RangeBarOption } from './ChartRangeBar.svelte';

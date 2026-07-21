@@ -24,17 +24,17 @@ Import a theme once in your root layout, then use components:
 
 ## Entry points
 
-| Import | Contents |
-| --- | --- |
-| `stratum-ui` | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps |
-| `stratum-ui/charts` | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities |
-| `stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts |
-| `stratum-ui/ui` | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, … |
-| `stratum-ui/forms` | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Toggle`, `RangeSelector` |
-| `stratum-ui/actions` | `portal`, `dropdownPosition`, `clickoutside` |
-| `stratum-ui/utils` | SI-unit conversion, number/date formatting, data transforms |
-| `stratum-ui/themes/*` | Theme CSS files (see below) |
-| `stratum-ui/icons/*.svelte` | Vendored icon components |
+| Import                       | Contents                                                                                                                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stratum-ui`                 | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps                                                                                            |
+| `stratum-ui/charts`          | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities |
+| `stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts                                                                                                             |
+| `stratum-ui/ui`              | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, …                                                                               |
+| `stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Toggle`, `RangeSelector`                                                                                                           |
+| `stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                   |
+| `stratum-ui/utils`           | SI-unit conversion, number/date formatting, data transforms                                                                                                                                                    |
+| `stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                    |
+| `stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                       |
 
 ## Theming
 
@@ -87,7 +87,12 @@ import '@fontsource/dm-mono/500.css';
 <script lang="ts">
 	import { ChartStore, StratumChart } from 'stratum-ui/charts';
 
-	const chart = new ChartStore({ key: Symbol('demo'), title: 'Generation', prefix: 'M', baseUnit: 'W' });
+	const chart = new ChartStore({
+		key: Symbol('demo'),
+		title: 'Generation',
+		prefix: 'M',
+		baseUnit: 'W'
+	});
 	chart.seriesData = rows; // [{ time, date, coal: 123, wind: 456, … }]
 	chart.seriesNames = ['coal', 'wind'];
 	chart.seriesColours = { coal: 'var(--su-chart-series-11)', wind: 'var(--su-chart-series-4)' };

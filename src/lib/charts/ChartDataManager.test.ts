@@ -1,0 +1,1666 @@
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import ChartDataManager, {
+	clearCompletedResponses,
+	clearInFlightFetches
+} from './ChartDataManager.svelte.js';
+import { collectSeriesByTimestamp, orderSeriesIds, rowsFromSeriesMaps } from './series-rows.js';
+
+// ============================================
+// Test Helpers
+// ============================================
+
+/**
+ * The OpenElectricity constants the manager used to hard-code, now injected
+ * via the neutral config options. Values match the old constants exactly so
+ * the numeric expectations below are unchanged.
+ */
+const EARLIEST_DATA_MS = new Date('1998-12-01T00:00:00Z').getTime();
+const API_MAX_RANGE_DAYS: Record<string, number> = { '5m': 30, '1h': 365 };
+
+interface ProcessFacilityPowerConfig {
+	/** Map unit code → fuel tech */
+	unitFuelTechMap: Record<string, string>;
+	/** Desired series ordering (e.g. ['power_UNIT1', 'power_UNIT2']) */
+	unitOrder?: string[];
+	/** Series IDs whose values should be negated */
+	loadsToInvert?: string[];
+	/** Returns display label for a unit */
+	getLabel: (unitCode: string, fuelTech: string) => string;
+	/** Returns hex colour for a unit */
+	getColour: (unitCode: string, fuelTech: string) => string;
+	/** Metric to filter for (default: 'power') */
+	metricFilter?: string;
+	/** Timezone offset string (default: '+10:00') */
+	networkTimezone?: string;
+}
+
+/**
+ * Process a facility power API response into chart-ready data — a local port
+ * of openelectricity's process-facility-power.js (a thin wrapper over the
+ * shared timestamp-union core in series-rows.js), reproduced here so the test
+ * wiring matches the source suite exactly.
+ */
+function processFacilityPower(powerResponse: any, config: ProcessFacilityPowerConfig) {
+	if (!powerResponse?.data) return null;
+
+	const {
+		unitFuelTechMap,
+		unitOrder = [],
+		loadsToInvert = [],
+		getLabel,
+		getColour,
+		metricFilter = 'power',
+		networkTimezone = '+10:00'
+	} = config;
+
+	const { seriesMaps, seriesMeta, timestamps } = collectSeriesByTimestamp(powerResponse, {
+		metricFilter,
+		networkTimezone,
+		mode: 'set',
+		shouldInvert: (seriesId) => loadsToInvert.includes(seriesId),
+		classifySeries: (series) => {
+			const unitCode = series.columns?.unit_code || series.name?.replace(`${metricFilter}_`, '');
+			if (!(unitCode in unitFuelTechMap)) return null;
+			return {
+				id: series.name || `${metricFilter}_${unitCode}`,
+				meta: { unitCode, fuelTech: unitFuelTechMap[unitCode] }
+			};
+		}
+	});
+
+	if (seriesMaps.size === 0) return null;
+
+	const seriesNames = orderSeriesIds([...seriesMaps.keys()], unitOrder);
+
+	const seriesLabels: Record<string, string> = {};
+	const seriesColours: Record<string, string> = {};
+
+	for (const seriesId of seriesNames) {
+		const meta = seriesMeta.get(seriesId);
+		if (meta) {
+			seriesLabels[seriesId] = getLabel(meta.unitCode, meta.fuelTech);
+			seriesColours[seriesId] = getColour(meta.unitCode, meta.fuelTech);
+		}
+	}
+
+	return {
+		data: rowsFromSeriesMaps(seriesMaps, timestamps, seriesNames),
+		seriesNames,
+		seriesLabels,
+		seriesColours
+	};
+}
+
+/**
+ * Build a minimal power API response that processFacilityPower can process.
+ * Each unit gets a series of [timestamp, value] pairs at 5-minute intervals.
+ *
+ * @param opts.networkId - 'NEM' or 'WEM'
+ * @param opts.unitCodes - e.g. ['UNIT1', 'UNIT2']
+ * @param opts.startISO - ISO timestamp for first point (e.g. '2026-02-08T04:50:00+10:00')
+ * @param opts.pointCount - number of 5-min data points
+ * @param opts.valueFn - generate value per unit/index
+ * @returns shape matching the OE API response
+ */
+function buildPowerResponse({
+	networkId,
+	unitCodes,
+	startISO,
+	pointCount,
+	valueFn
+}: {
+	networkId: string;
+	unitCodes: string[];
+	startISO: string;
+	pointCount: number;
+	valueFn?: (unitCode: string, index: number) => number;
+}): any {
+	const startMs = new Date(startISO).getTime();
+	const intervalMs = 5 * 60 * 1000;
+	const defaultValueFn = valueFn || ((_code: string, i: number) => 100 + i);
+
+	// The real API returns timestamps in the network's local time.
+	// Convert UTC ms → local time string with network offset appended.
+	const offsetStr = networkId === 'WEM' ? '+08:00' : '+10:00';
+	const offsetMs = networkId === 'WEM' ? 8 * 3600_000 : 10 * 3600_000;
+
+	return {
+		data: [
+			{
+				metric: 'power',
+				interval: '5m',
+				unit: 'MW',
+				results: unitCodes.map((code) => ({
+					name: `power_${code}`,
+					columns: { unit_code: code },
+					data: Array.from({ length: pointCount }, (_, i) => {
+						const utcMs = startMs + i * intervalMs;
+						// Format as local time with offset, e.g. "2026-02-08T04:50:00+10:00"
+						const localISO = new Date(utcMs + offsetMs).toISOString().slice(0, 19) + offsetStr;
+						return [localISO, defaultValueFn(code, i)];
+					})
+				}))
+			}
+		]
+	};
+}
+
+/**
+ * Create a ChartDataManager with sensible defaults for testing — reproduces
+ * the facility wiring (processFacilityPower + the facility URL with its
+ * `network_id` param) that used to be the manager's built-in default, so the
+ * behavioural assertions below are unchanged by the neutral-config refactor.
+ * The old OE constants (data floor, per-interval range caps, 5m+energy
+ * combo block) are passed through the generalised config options.
+ */
+function createManager(overrides: Record<string, any> = {}): ChartDataManager {
+	const {
+		facilityCode = 'TESTFAC',
+		networkId = 'NEM',
+		interval = '5m',
+		metric = 'power',
+		unitFuelTechMap = { UNIT1: 'solar_utility', UNIT2: 'wind' },
+		unitOrder = ['power_UNIT1', 'power_UNIT2'],
+		loadsToInvert = [],
+		getLabel = (unitCode: string, fuelTech: string) => `${unitCode} (${fuelTech})`,
+		getColour = (unitCode: string) => (unitCode === 'UNIT1' ? '#ff0000' : '#0000ff'),
+		...neutralOverrides
+	} = overrides;
+
+	const networkTimezone = networkId === 'WEM' ? '+08:00' : '+10:00';
+
+	return new ChartDataManager({
+		cacheKey: facilityCode,
+		networkTimezone,
+		interval,
+		metric,
+		earliestDataMs: EARLIEST_DATA_MS,
+		maxRangeDaysByInterval: API_MAX_RANGE_DAYS,
+		// 5m only supports power and market_value on the OE API.
+		validateRequest: (i: string, m: string) => !(i === '5m' && m === 'energy'),
+		processResponse: (response: any) =>
+			processFacilityPower(response, {
+				unitFuelTechMap,
+				unitOrder,
+				loadsToInvert,
+				getLabel,
+				getColour,
+				metricFilter: metric,
+				networkTimezone
+			}),
+		buildFetchUrl: (params: URLSearchParams) => {
+			params.set('network_id', networkId);
+			return `/api/facilities/${facilityCode}/power?${params.toString()}`;
+		},
+		...neutralOverrides
+	});
+}
+
+// ============================================
+// Tests
+// ============================================
+
+describe('ChartDataManager', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		// Module-level LRU / in-flight map would otherwise leak across tests.
+		clearCompletedResponses();
+		clearInFlightFetches();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.restoreAllMocks();
+	});
+
+	// ------------------------------------------
+	// seedCache + basic cache operations
+	// ------------------------------------------
+
+	describe('seedCache', () => {
+		it('should populate cache from power response', () => {
+			const manager = createManager();
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1', 'UNIT2'],
+				startISO: '2026-02-08T04:50:00+10:00',
+				pointCount: 10
+			});
+
+			manager.seedCache(response);
+
+			expect(manager.cacheStart).not.toBeNull();
+			expect(manager.cacheEnd).not.toBeNull();
+			const cache = manager.processedCache;
+			expect(cache).not.toBeNull();
+			expect(cache?.data.length).toBeGreaterThan(0);
+			expect(cache?.seriesNames).toContain('power_UNIT1');
+			expect(cache?.seriesNames).toContain('power_UNIT2');
+		});
+
+		it('should set cacheStart/cacheEnd to first/last data point timestamps', () => {
+			const manager = createManager();
+			const startISO = '2026-02-08T04:50:00+10:00';
+			const startMs = new Date(startISO).getTime();
+			const pointCount = 10;
+			const intervalMs = 5 * 60 * 1000;
+
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO,
+				pointCount
+			});
+
+			manager.seedCache(response);
+
+			expect(manager.cacheStart).toBe(startMs);
+			expect(manager.cacheEnd).toBe(startMs + (pointCount - 1) * intervalMs);
+		});
+
+		it('keeps a stable processedCache identity until the cache changes', () => {
+			const manager = createManager();
+			manager.seedCache(
+				buildPowerResponse({
+					networkId: 'NEM',
+					unitCodes: ['UNIT1'],
+					startISO: '2026-02-08T04:50:00+10:00',
+					pointCount: 10
+				})
+			);
+
+			const first = manager.processedCache;
+			// Repeated reads return the same object — dependants don't churn.
+			expect(manager.processedCache).toBe(first);
+
+			manager.clearCache();
+			expect(manager.processedCache).toBeNull();
+		});
+
+		it('should ignore response with no data', () => {
+			const manager = createManager();
+			manager.seedCache(null);
+			expect(manager.processedCache).toBeNull();
+
+			manager.seedCache({ data: [] });
+			expect(manager.processedCache).toBeNull();
+		});
+	});
+
+	// ------------------------------------------
+	// getDataForRange
+	// ------------------------------------------
+
+	describe('getDataForRange', () => {
+		it('should return only data within the requested range', () => {
+			const manager = createManager();
+			const startISO = '2026-02-08T00:00:00+10:00';
+			const startMs = new Date(startISO).getTime();
+			const intervalMs = 5 * 60 * 1000;
+
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO,
+				pointCount: 100 // ~8.3 hours of data
+			});
+
+			manager.seedCache(response);
+
+			// Request a 1-hour slice in the middle
+			const sliceStart = startMs + 30 * intervalMs; // 2.5 hours in
+			const sliceEnd = startMs + 42 * intervalMs; // 3.5 hours in
+			const slice = manager.getDataForRange(sliceStart, sliceEnd);
+
+			expect(slice.length).toBe(13); // 12 intervals + 1 inclusive
+			for (const row of slice) {
+				expect(row.time).toBeGreaterThanOrEqual(sliceStart);
+				expect(row.time).toBeLessThanOrEqual(sliceEnd);
+			}
+		});
+
+		it('should return empty array when cache is empty', () => {
+			const manager = createManager();
+			expect(manager.getDataForRange(0, Date.now())).toEqual([]);
+		});
+	});
+
+	// ------------------------------------------
+	// Bug: Timezone conversion for API fetches
+	// ------------------------------------------
+
+	describe('timezone conversion (NEM +10:00)', () => {
+		it('should format API dates in network local time, not UTC', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-07T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ networkId: 'NEM' });
+
+			// Seed cache with data starting at Feb 8, 4:50am AEST
+			const cacheStartAEST = '2026-02-08T04:50:00+10:00';
+			const cacheStartUTC = new Date(cacheStartAEST).getTime(); // Feb 7, 18:50 UTC
+
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO: cacheStartAEST,
+				pointCount: 20
+			});
+			manager.seedCache(response);
+
+			// Request data before the cache (panning backward)
+			const oneHourMs = 60 * 60 * 1000;
+			manager.requestRange(cacheStartUTC - 6 * oneHourMs, cacheStartUTC);
+
+			// Advance past debounce timer (150ms)
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+			const url = new URL(fetchSpy.mock.calls[0][0], 'http://localhost');
+			const dateEnd = url.searchParams.get('date_end');
+
+			// The date_end should be in AEST (Feb 8, ~04:50), NOT UTC (Feb 7, ~18:50)
+			// Key check: the date portion should be 2026-02-08, not 2026-02-07
+			expect(dateEnd).toMatch(/^2026-02-08/);
+		});
+
+		it('should use +08:00 offset for WEM network', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'WEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T04:50:00+08:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({
+				networkId: 'WEM',
+				unitFuelTechMap: { UNIT1: 'wind' },
+				unitOrder: ['power_UNIT1']
+			});
+
+			const cacheStartAWST = '2026-02-08T04:50:00+08:00';
+			const cacheStartUTC = new Date(cacheStartAWST).getTime(); // Feb 7, 20:50 UTC
+
+			const response = buildPowerResponse({
+				networkId: 'WEM',
+				unitCodes: ['UNIT1'],
+				startISO: cacheStartAWST,
+				pointCount: 20
+			});
+			manager.seedCache(response);
+
+			const oneHourMs = 60 * 60 * 1000;
+			manager.requestRange(cacheStartUTC - 6 * oneHourMs, cacheStartUTC);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+			const url = new URL(fetchSpy.mock.calls[0][0], 'http://localhost');
+			const dateEnd = url.searchParams.get('date_end');
+
+			// With +8 offset, date_end should still be Feb 8 (AWST), not Feb 7 (UTC)
+			expect(dateEnd).toMatch(/^2026-02-08/);
+		});
+	});
+
+	// ------------------------------------------
+	// Bug: Gap overlap buffer at cache boundary
+	// ------------------------------------------
+
+	describe('gap overlap at cache boundary', () => {
+		it('fetches the left gap up to the cache boundary (contiguous, no overlap)', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-07T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+
+			// Seed cache: Feb 8 00:00 to 08:00 AEST
+			const cacheStartAEST = '2026-02-08T00:00:00+10:00';
+			const cacheStartMs = new Date(cacheStartAEST).getTime();
+
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO: cacheStartAEST,
+				pointCount: 96 // 8 hours
+			});
+			manager.seedCache(response);
+
+			// Request range that straddles the cache start (typical pan scenario:
+			// viewport shifts left so viewStart < cacheStart < viewEnd)
+			const threeHoursMs = 3 * 60 * 60 * 1000;
+			manager.requestRange(cacheStartMs - threeHoursMs, cacheStartMs + threeHoursMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+			const url = new URL(fetchSpy.mock.calls[0][0], 'http://localhost');
+			const dateStart = url.searchParams.get('date_start');
+			const dateEnd = url.searchParams.get('date_end');
+
+			// The left gap is fetched right up to — not past — the cache start. That
+			// is contiguous with the cached data (no seam gap) without re-fetching
+			// already-cached buckets, which is what made over-buffered "All" ranges
+			// re-request the same span on every viewport tick.
+			const fetchEndMs = Date.parse(dateEnd + '+10:00');
+			expect(fetchEndMs).toBe(cacheStartMs);
+
+			// ...and it starts at the requested viewStart, so the older span is loaded.
+			const fetchStartMs = Date.parse(dateStart + '+10:00');
+			expect(fetchStartMs).toBe(cacheStartMs - threeHoursMs);
+		});
+	});
+
+	// ------------------------------------------
+	// Bug: Merge deduplication by timestamp
+	// ------------------------------------------
+
+	describe('merge deduplication', () => {
+		it('should not create duplicate rows when fetched data overlaps with cache', async () => {
+			const manager = createManager({
+				unitFuelTechMap: { UNIT1: 'solar_utility' },
+				unitOrder: ['power_UNIT1']
+			});
+
+			// Seed with 20 points starting at T0
+			const startISO = '2026-02-08T00:00:00+10:00';
+			const startMs = new Date(startISO).getTime();
+			const intervalMs = 5 * 60 * 1000;
+
+			const response1 = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO,
+				pointCount: 20,
+				valueFn: () => 100
+			});
+			manager.seedCache(response1);
+
+			const originalLength = manager.processedCache!.data.length;
+
+			// Build overlapping data: starts 5 points earlier, overlaps 10 points
+			const overlapStartISO = new Date(startMs - 5 * intervalMs).toISOString();
+			const fetchResponse = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO: overlapStartISO,
+				pointCount: 15, // 5 before cache + 10 overlapping
+				valueFn: () => 200
+			});
+
+			// Mock fetch to return overlapping data
+			vi.stubGlobal(
+				'fetch',
+				vi.fn().mockResolvedValue({
+					ok: true,
+					json: async () => ({ response: fetchResponse })
+				})
+			);
+
+			// Request a range that triggers a fetch
+			manager.requestRange(startMs - 10 * intervalMs, startMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			// Wait for the async fetch to complete
+			await vi.advanceTimersByTimeAsync(100);
+
+			const allData = manager.processedCache!.data;
+
+			// Check no duplicate timestamps
+			const timestamps = allData.map((row: any) => row.time);
+			const uniqueTimestamps = new Set(timestamps);
+			expect(timestamps.length).toBe(uniqueTimestamps.size);
+
+			// Should have more data than before (5 new points added)
+			expect(allData.length).toBe(originalLength + 5);
+
+			// Data should be sorted by time
+			for (let i = 1; i < allData.length; i++) {
+				expect(allData[i].time).toBeGreaterThanOrEqual(allData[i - 1].time);
+			}
+		});
+	});
+
+	// ------------------------------------------
+	// Cache gap detection
+	// ------------------------------------------
+
+	describe('requestRange gap detection', () => {
+		it('should not fetch when range is fully cached', async () => {
+			const fetchSpy = vi.fn();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+			const startISO = '2026-02-08T00:00:00+10:00';
+			const startMs = new Date(startISO).getTime();
+			const intervalMs = 5 * 60 * 1000;
+
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO,
+				pointCount: 100
+			});
+			manager.seedCache(response);
+
+			// Request a sub-range of the cache
+			manager.requestRange(startMs + 10 * intervalMs, startMs + 50 * intervalMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).not.toHaveBeenCalled();
+		});
+
+		it('should fetch when range extends before cache', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-07T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO: '2026-02-08T00:00:00+10:00',
+				pointCount: 50
+			});
+			manager.seedCache(response);
+
+			const cacheStart = manager.cacheStart as number;
+			const oneHour = 60 * 60 * 1000;
+			manager.requestRange(cacheStart - 3 * oneHour, cacheStart + oneHour);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+		});
+	});
+
+	// ------------------------------------------
+	// clearCache
+	// ------------------------------------------
+
+	describe('clearCache', () => {
+		it('should reset all state', () => {
+			const manager = createManager();
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO: '2026-02-08T00:00:00+10:00',
+				pointCount: 20
+			});
+			manager.seedCache(response);
+
+			expect(manager.processedCache).not.toBeNull();
+
+			manager.clearCache();
+
+			expect(manager.processedCache).toBeNull();
+			expect(manager.cacheStart).toBeNull();
+			expect(manager.cacheEnd).toBeNull();
+			expect(manager.isLoading).toBe(false);
+		});
+	});
+
+	// ------------------------------------------
+	// Metric/interval validation (Fix 2)
+	// ------------------------------------------
+
+	describe('metric/interval validation', () => {
+		it('should not fetch when interval=5m and metric=energy', async () => {
+			const fetchSpy = vi.fn();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			// The 5m+energy block is the injected validateRequest guard (see
+			// createManager) — the OE rule the manager used to hard-code.
+			const manager = createManager({ interval: '5m', metric: 'energy' });
+
+			// Request a range that would normally trigger a fetch
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			// Should not have called fetch — the invalid combo is blocked
+			expect(fetchSpy).not.toHaveBeenCalled();
+		});
+
+		it('should allow interval=5m with metric=power', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '5m', metric: 'power' });
+
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalled();
+		});
+
+		it('should allow interval=1d with metric=energy', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '1d', metric: 'energy' });
+
+			const now = Date.now();
+			manager.requestRange(now - 86400_000 * 10, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalled();
+		});
+	});
+
+	// ------------------------------------------
+	// Per-request range cap (#maxApiRangeMs / batch splitting)
+	// ------------------------------------------
+
+	describe('per-request range cap', () => {
+		const DAY = 24 * 60 * 60 * 1000;
+
+		/** Resolve a successful power response for any fetch. */
+		function okFetchSpy() {
+			return vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+		}
+
+		it('fetches a full-lifetime monthly range in a single request', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '1M', metric: 'energy' });
+
+			// ~25 years — monthly has no configured cap, so no batching.
+			const now = Date.now();
+			manager.requestRange(now - 25 * 365 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('fetches a full-lifetime daily range in a single request', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '1d', metric: 'energy' });
+
+			const now = Date.now();
+			manager.requestRange(now - 25 * 365 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('fetches a full-lifetime quarterly (3M) range in a single request', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '3M', metric: 'energy' });
+
+			// "All" can span decades; quarterly is ~4 points/year, so the whole
+			// history must come back in one request, not batched.
+			const now = Date.now();
+			manager.requestRange(now - 25 * 365 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('fetches a full-lifetime yearly (1y) range in a single request', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '1y', metric: 'energy' });
+
+			const now = Date.now();
+			manager.requestRange(now - 25 * 365 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('clamps an over-buffered "All" energy range to a single request', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '3M', metric: 'energy' });
+
+			// Mirror a 3× prefetch buffer on a decades-wide "All" viewport: start
+			// is pushed ~100y before the 1998 data floor, end ~50y past now. The
+			// window must clamp to [earliestDataMs → now] and fetch once, not split.
+			const now = Date.now();
+			const YEAR = 365 * DAY;
+			manager.requestRange(now - 130 * YEAR, now + 50 * YEAR, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('batches 5m ranges wider than the API 30-day cap', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '5m', metric: 'power' });
+
+			// A power-mode zoom-out toward the 16-day viewport clamp fetches 3×
+			// the span (viewport + 1× pan buffer each side) at 5m before the
+			// hysteresis flips to energy. Over the configured 30-day cap the gap
+			// must arrive as two batches, not one rejected request.
+			const now = Date.now();
+			manager.requestRange(now - 39 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(2);
+		});
+
+		it('batches 1h ranges wider than the API 365-day cap', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '1h', metric: 'energy' });
+
+			// A ~60-day custom range at hourly grain with the 3× energy buffer
+			// spans up to 420 days — over the configured 365-day cap for 1h.
+			const now = Date.now();
+			manager.requestRange(now - 420 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	// ------------------------------------------
+	// Shared in-flight fetch dedup
+	// ------------------------------------------
+
+	describe('shared in-flight fetch dedup', () => {
+		const DAY = 24 * 60 * 60 * 1000;
+
+		/** A fetch spy that stays pending until the returned controller resolves. */
+		function deferredFetchSpy() {
+			let resolveFetch: (v: any) => void = () => {};
+			const ready = new Promise((r) => (resolveFetch = r));
+			const spy = vi.fn().mockImplementation(async () => {
+				await ready;
+				return {
+					ok: true,
+					json: async () => ({
+						response: buildPowerResponse({
+							networkId: 'NEM',
+							unitCodes: ['UNIT1'],
+							startISO: '2026-02-08T00:00:00+10:00',
+							pointCount: 12
+						})
+					})
+				};
+			});
+			return { spy, resolveFetch };
+		}
+
+		it('collapses concurrent identical requests across managers into one fetch', async () => {
+			const { spy, resolveFetch } = deferredFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			// Two managers with the same facility/interval/metric — e.g. the price
+			// and intensity providers both hitting the combined energy URL — resolve
+			// to the same URL, so only one network request should fire.
+			const m1 = createManager({ interval: '1M', metric: 'energy' });
+			const m2 = createManager({ interval: '1M', metric: 'energy' });
+
+			const now = Date.now();
+			m1.requestRange(now - 100 * DAY, now, { immediate: true });
+			m2.requestRange(now - 100 * DAY, now, { immediate: true });
+
+			// Both requests are in flight before any resolves → single fetch.
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			resolveFetch(undefined);
+			await vi.advanceTimersByTimeAsync(200);
+			expect(spy).toHaveBeenCalledTimes(1);
+		});
+
+		it('serves a sequential identical request from the completed-response cache', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const now = Date.now();
+			const m1 = createManager({ interval: '1M', metric: 'energy' });
+			m1.requestRange(now - 100 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+			// A later manager repeating the same URL skips the network and the JSON
+			// re-parse entirely — same data, no second fetch.
+			const m2 = createManager({ interval: '1M', metric: 'energy' });
+			m2.requestRange(now - 100 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('re-fetches an identical URL once the response cache TTL has expired', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			// Fix the range up-front so both requests format identical URLs even
+			// after the clock advances past the TTL.
+			const now = Date.now();
+			const from = now - 100 * DAY;
+
+			const m1 = createManager({ interval: '1M', metric: 'energy' });
+			m1.requestRange(from, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+			// Past the 5-minute TTL (matches the API route's max-age) → miss.
+			await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 1000);
+
+			const m2 = createManager({ interval: '1M', metric: 'energy' });
+			m2.requestRange(from, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(2);
+		});
+
+		it('does not cache non-OK responses', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const now = Date.now();
+			const m1 = createManager({ interval: '1M', metric: 'energy' });
+			m1.requestRange(now - 100 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+			// A retry after a failure must hit the network again.
+			const m2 = createManager({ interval: '1M', metric: 'energy' });
+			m2.requestRange(now - 100 * DAY, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	// ------------------------------------------
+	// Pre-data empty-span suppression (over-buffered "All")
+	// ------------------------------------------
+
+	describe('pre-data empty-span suppression', () => {
+		const DAY = 24 * 60 * 60 * 1000;
+		const dataStart = new Date('2026-02-08T00:00:00+10:00').getTime();
+		const lastPoint = dataStart + 55 * 60 * 1000; // 12 × 5-min points
+
+		function okFetchSpy() {
+			return vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+		}
+
+		it('does not re-fetch the empty pre-data span on a repeated over-buffered request', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '5m', metric: 'power' });
+			// Reaches before the first data point, but stays under the 30-day 5m
+			// batch cap so the request isn't split.
+			const reqStart = dataStart - 25 * DAY;
+
+			manager.requestRange(reqStart, lastPoint, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+			// Same over-buffered range again: the pre-data span is recorded empty and
+			// the rest is cached, so no second request fires.
+			manager.requestRange(reqStart, lastPoint, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+		});
+
+		it('still fetches a genuinely older left gap (no left-overlap regression)', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager({ interval: '5m', metric: 'power' });
+			// Load exactly the data range → cache = [dataStart, lastPoint], no
+			// pre-data span recorded (reqStart === cacheStart).
+			manager.requestRange(dataStart, lastPoint, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+			// Pan back to an earlier, uncached range → the left gap must still fetch.
+			manager.requestRange(dataStart - 10 * DAY, lastPoint, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(fetchSpy).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	// ------------------------------------------
+	// Empty range tracking (Fix 4)
+	// ------------------------------------------
+
+	describe('empty range tracking', () => {
+		it('should not re-fetch a range that previously returned no data', async () => {
+			// First fetch returns empty data (no results)
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: { data: [] }
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+
+			// Seed with some data so that the manager has a cache range
+			const startISO = '2026-02-08T00:00:00+10:00';
+			const startMs = new Date(startISO).getTime();
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO,
+				pointCount: 20
+			});
+			manager.seedCache(response);
+
+			// Request before the cache — this will fetch and get empty data
+			const threeHoursMs = 3 * 60 * 60 * 1000;
+			manager.requestRange(startMs - threeHoursMs, startMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+
+			// Now request the same range again — should NOT fetch
+			fetchSpy.mockClear();
+			manager.requestRange(startMs - threeHoursMs, startMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).not.toHaveBeenCalled();
+		});
+
+		it('should reset empty ranges on clearCache', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: { data: [] }
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+
+			// Seed and then fetch an empty range
+			const startISO = '2026-02-08T00:00:00+10:00';
+			const startMs = new Date(startISO).getTime();
+			const response = buildPowerResponse({
+				networkId: 'NEM',
+				unitCodes: ['UNIT1'],
+				startISO,
+				pointCount: 20
+			});
+			manager.seedCache(response);
+
+			const threeHoursMs = 3 * 60 * 60 * 1000;
+			manager.requestRange(startMs - threeHoursMs, startMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+
+			// Clear cache — should reset empty range tracking
+			manager.clearCache();
+			// Also drop the module-level response cache so the assertion below sees
+			// the manager's re-request at the fetch layer (the LRU would otherwise
+			// serve it without a network call).
+			clearCompletedResponses();
+
+			// Re-seed and request the same range — should fetch again
+			manager.seedCache(response);
+			fetchSpy.mockClear();
+
+			// Update mock to return actual data this time
+			fetchSpy.mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-07T21:00:00+10:00',
+						pointCount: 36
+					})
+				})
+			});
+
+			manager.requestRange(startMs - threeHoursMs, startMs);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledOnce();
+		});
+	});
+
+	// ------------------------------------------
+	// dispose() / stale-fetch guard
+	// ------------------------------------------
+
+	describe('dispose / stale-fetch guard', () => {
+		/** A fetch spy that stays pending until the returned resolver is called. */
+		function deferredFetchSpy() {
+			let resolveFetch: (v: any) => void = () => {};
+			const ready = new Promise((r) => (resolveFetch = r));
+			const spy = vi.fn().mockImplementation(async () => {
+				await ready;
+				return {
+					ok: true,
+					json: async () => ({
+						response: buildPowerResponse({
+							networkId: 'NEM',
+							unitCodes: ['UNIT1'],
+							startISO: '2026-02-08T00:00:00+10:00',
+							pointCount: 12
+						})
+					})
+				};
+			});
+			return { spy, resolveFetch };
+		}
+
+		it('drops an in-flight fetch result instead of merging it', async () => {
+			const { spy, resolveFetch } = deferredFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			manager.dispose();
+			expect(manager.isLoading).toBe(false);
+			expect(manager.hasPendingFetch).toBe(false);
+
+			resolveFetch(undefined);
+			await vi.advanceTimersByTimeAsync(200);
+
+			// Nothing merged into the retired manager, no loading state revived.
+			expect(manager.processedCache).toBeNull();
+			expect(manager.isLoading).toBe(false);
+		});
+
+		it('cancels a pending debounced fetch', async () => {
+			const fetchSpy = vi.fn();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now); // debounced (150ms)
+			manager.dispose();
+			await vi.advanceTimersByTimeAsync(300);
+
+			expect(fetchSpy).not.toHaveBeenCalled();
+		});
+
+		it('serves new requests normally after dispose (stash revival)', async () => {
+			const fetchSpy = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const manager = createManager();
+			manager.dispose();
+
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(fetchSpy).toHaveBeenCalledTimes(1);
+			expect(manager.processedCache).not.toBeNull();
+		});
+
+		it('clearCache during an in-flight fetch drops the stale merge', async () => {
+			const { spy, resolveFetch } = deferredFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now, { immediate: true });
+
+			manager.clearCache();
+			resolveFetch(undefined);
+			await vi.advanceTimersByTimeAsync(200);
+
+			// The reset cache must not be repopulated by the stale response.
+			expect(manager.processedCache).toBeNull();
+		});
+	});
+
+	// ------------------------------------------
+	// Interval date snapping (start down, end UP)
+	// ------------------------------------------
+
+	describe('interval date snapping', () => {
+		function okFetchSpy() {
+			return vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+		}
+
+		function firstCallDates(spy: Mock) {
+			const url = new URL(spy.mock.calls[0][0], 'http://localhost');
+			return {
+				dateStart: url.searchParams.get('date_start'),
+				dateEnd: url.searchParams.get('date_end')
+			};
+		}
+
+		it('snaps a yearly range end UP so the current partial year is included', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			// Fetch window ending mid-2026 (local +10). The API's date_end excludes
+			// the bucket starting at that instant, so a down-snap to 2026-01-01
+			// would drop the in-progress 2026 bucket entirely.
+			const from = new Date('2023-03-15T00:00:00+10:00').getTime();
+			const to = new Date('2026-07-17T12:00:00+10:00').getTime();
+			const manager = createManager({ interval: '1y', metric: 'energy' });
+			manager.requestRange(from, to, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			const { dateStart, dateEnd } = firstCallDates(fetchSpy);
+			expect(dateStart).toBe('2023-01-01T00:00:00');
+			expect(dateEnd).toBe('2027-01-01T00:00:00');
+		});
+
+		it('keeps an exactly boundary-aligned end where it is', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const from = new Date('2023-01-01T00:00:00+10:00').getTime();
+			const to = new Date('2026-01-01T00:00:00+10:00').getTime();
+			const manager = createManager({ interval: '1y', metric: 'energy' });
+			manager.requestRange(from, to, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(firstCallDates(fetchSpy).dateEnd).toBe('2026-01-01T00:00:00');
+		});
+
+		it('snaps monthly and daily ends UP to the next boundary', async () => {
+			const fetchSpy = okFetchSpy();
+			vi.stubGlobal('fetch', fetchSpy);
+
+			const from = new Date('2026-05-10T00:00:00+10:00').getTime();
+			const to = new Date('2026-07-17T12:00:00+10:00').getTime();
+			const monthly = createManager({ interval: '1M', metric: 'energy' });
+			monthly.requestRange(from, to, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(firstCallDates(fetchSpy).dateStart).toBe('2026-05-01T00:00:00');
+			expect(firstCallDates(fetchSpy).dateEnd).toBe('2026-08-01T00:00:00');
+
+			fetchSpy.mockClear();
+			const daily = createManager({ interval: '1d', metric: 'energy' });
+			daily.requestRange(from, to, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+			expect(firstCallDates(fetchSpy).dateEnd).toBe('2026-07-18T00:00:00');
+		});
+	});
+
+	// ------------------------------------------
+	// cancelStaleFetches / refcounted abort
+	// ------------------------------------------
+
+	describe('cancelStaleFetches / refcounted abort', () => {
+		const DAY = 24 * 60 * 60 * 1000;
+		const HOUR = 60 * 60 * 1000;
+
+		/**
+		 * A fetch spy that honours `{ signal }` like the real fetch — stays pending
+		 * until the resolver is called, rejects with AbortError when the signal
+		 * aborts — and records each request's signal for refcount assertions.
+		 */
+		function abortableFetchSpy() {
+			let resolveFetch: (v: any) => void = () => {};
+			const ready = new Promise((r) => (resolveFetch = r));
+			const signals: AbortSignal[] = [];
+			const spy = vi.fn().mockImplementation((_url: any, opts: any) => {
+				const signal: AbortSignal | undefined = opts?.signal;
+				if (signal) signals.push(signal);
+				return new Promise((resolve, reject) => {
+					if (signal?.aborted) return reject(new DOMException('Aborted', 'AbortError'));
+					signal?.addEventListener(
+						'abort',
+						() => reject(new DOMException('Aborted', 'AbortError')),
+						{ once: true }
+					);
+					ready.then(() =>
+						resolve({
+							ok: true,
+							json: async () => ({
+								response: buildPowerResponse({
+									networkId: 'NEM',
+									unitCodes: ['UNIT1'],
+									startISO: '2026-02-08T00:00:00+10:00',
+									pointCount: 12
+								})
+							})
+						})
+					);
+				});
+			});
+			return { spy, resolveFetch, signals };
+		}
+
+		it('aborts a stale in-flight batch: loading cleans up, nothing merged, span stays fetchable', async () => {
+			const { spy } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - HOUR, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(1);
+			expect(manager.isLoading).toBe(true);
+
+			// Settle on a keep-window disjoint from the in-flight batch — it aborts.
+			manager.cancelStaleFetches(now - 10 * HOUR, now - 5 * HOUR);
+			await vi.advanceTimersByTimeAsync(0);
+
+			expect(manager.isLoading).toBe(false);
+			expect(manager.hasPendingFetch).toBe(false);
+			expect(manager.processedCache).toBeNull();
+
+			// The aborted span was NOT recorded as empty and never reached the
+			// completed-response LRU — the same request hits the network again.
+			manager.requestRange(now - HOUR, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(2);
+		});
+
+		it('subtracts in-flight batches from new gaps — an overlapping re-request is a no-op', async () => {
+			const { spy, resolveFetch } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - 2 * HOUR, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			// A drifted keep-window (the settle fan-out case) fully covered by the
+			// in-flight batch must not spawn a second batch.
+			manager.reconcileWindow(now - HOUR, now);
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			resolveFetch(undefined);
+			await vi.advanceTimersByTimeAsync(0);
+			expect(manager.processedCache).not.toBeNull();
+		});
+
+		it('leaves in-flight batches that overlap the keep-window running', async () => {
+			const { spy, resolveFetch } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - HOUR, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			// Keep-window overlaps the batch — nothing is aborted.
+			manager.cancelStaleFetches(now - 2 * HOUR, now);
+			await vi.advanceTimersByTimeAsync(0);
+			expect(manager.isLoading).toBe(true);
+
+			resolveFetch(undefined);
+			await vi.advanceTimersByTimeAsync(0);
+			expect(manager.processedCache).not.toBeNull();
+		});
+
+		it('drops a pending debounced fetch that is disjoint from the keep-window', async () => {
+			const { spy } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - HOUR, now); // debounced
+			manager.cancelStaleFetches(now - 20 * HOUR, now - 10 * HOUR);
+			await vi.advanceTimersByTimeAsync(300);
+
+			expect(spy).not.toHaveBeenCalled();
+			expect(manager.hasPendingFetch).toBe(false);
+		});
+
+		it('clamps an overlapping pending fetch to the keep-window', async () => {
+			const { spy, resolveFetch } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			// Mid-gesture requests merged into one wide pending window…
+			manager.requestRange(now - 10 * HOUR, now);
+			// …then the gesture settles on a narrower range.
+			const keepStart = now - 2 * HOUR;
+			manager.cancelStaleFetches(keepStart, now);
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(spy).toHaveBeenCalledTimes(1);
+			const url = new URL(spy.mock.calls[0][0], 'http://localhost');
+			const fetchStartMs = Date.parse(url.searchParams.get('date_start') + '+10:00');
+			// API dates are formatted at second precision.
+			expect(fetchStartMs).toBe(Math.floor(keepStart / 1000) * 1000);
+
+			resolveFetch(undefined);
+		});
+
+		it('refcounts shared URLs: the request survives one manager cancelling, aborts when all do', async () => {
+			const { spy, signals } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const now = Date.now();
+			const from = now - 100 * DAY;
+			const m1 = createManager({ interval: '1M', metric: 'energy' });
+			const m2 = createManager({ interval: '1M', metric: 'energy' });
+			m1.requestRange(from, now, { immediate: true });
+			m2.requestRange(from, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(1);
+			expect(signals.length).toBe(1);
+
+			// One manager retires — the other still waits on the shared request.
+			m1.dispose();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(signals[0].aborted).toBe(false);
+			expect(m2.isLoading).toBe(true);
+
+			// Last consumer gone — now the network request itself is aborted.
+			m2.dispose();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(signals[0].aborted).toBe(true);
+		});
+
+		it('dispose aborts in-flight batches so a revived manager re-fetches them', async () => {
+			const { spy } = abortableFetchSpy();
+			vi.stubGlobal('fetch', spy);
+
+			const manager = createManager();
+			const now = Date.now();
+			manager.requestRange(now - HOUR, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			manager.dispose();
+			await vi.advanceTimersByTimeAsync(0);
+			expect(manager.isLoading).toBe(false);
+
+			// Stash-revival path: the same span fetches again after dispose.
+			manager.requestRange(now - HOUR, now, { immediate: true });
+			expect(spy).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	// ------------------------------------------
+	// Injected fetch (config.fetch)
+	// ------------------------------------------
+
+	describe('injected fetch', () => {
+		it('uses the configured fetch implementation instead of the global', async () => {
+			const globalSpy = vi.fn();
+			vi.stubGlobal('fetch', globalSpy);
+
+			const injected = vi.fn().mockResolvedValue({
+				ok: true,
+				json: async () => ({
+					response: buildPowerResponse({
+						networkId: 'NEM',
+						unitCodes: ['UNIT1'],
+						startISO: '2026-02-08T00:00:00+10:00',
+						pointCount: 12
+					})
+				})
+			});
+
+			const manager = createManager({ fetch: injected });
+			const now = Date.now();
+			manager.requestRange(now - 3600_000, now, { immediate: true });
+			await vi.advanceTimersByTimeAsync(200);
+
+			expect(injected).toHaveBeenCalledTimes(1);
+			expect(globalSpy).not.toHaveBeenCalled();
+			expect(manager.processedCache).not.toBeNull();
+		});
+	});
+
+	// ------------------------------------------
+	// Zoom viewport math
+	// ------------------------------------------
+
+	describe('zoom viewport', () => {
+		const MIN_VIEWPORT_MS = 1 * 60 * 60 * 1000; // 1 hour
+		const MAX_VIEWPORT_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+		/**
+		 * Pure implementation of the zoom logic from FacilityChart.
+		 * This mirrors handleZoom exactly so we can test the math.
+		 *
+		 * @param factor - >1 = zoom in, <1 = zoom out
+		 * @param centerMs - anchor point in time-domain
+		 * @param now - current time for future clamping
+		 */
+		function computeZoom(
+			viewStart: number,
+			viewEnd: number,
+			factor: number,
+			centerMs: number,
+			now: number = Date.now()
+		): { viewStart: number; viewEnd: number } {
+			const duration = viewEnd - viewStart;
+			const newDuration = Math.min(Math.max(duration / factor, MIN_VIEWPORT_MS), MAX_VIEWPORT_MS);
+
+			const ratio = (centerMs - viewStart) / duration;
+			let newStart = centerMs - ratio * newDuration;
+			let newEnd = newStart + newDuration;
+
+			if (newEnd > now) {
+				newEnd = now;
+				newStart = now - newDuration;
+			}
+
+			return { viewStart: newStart, viewEnd: newEnd };
+		}
+
+		it('should shrink viewport when zooming in (factor > 1)', () => {
+			const fourHours = 4 * 60 * 60 * 1000;
+			const start = 0;
+			const end = fourHours;
+			const center = fourHours / 2;
+
+			const result = computeZoom(start, end, 2, center, Infinity);
+
+			const newDuration = result.viewEnd - result.viewStart;
+			expect(newDuration).toBe(fourHours / 2); // 2 hours
+		});
+
+		it('should expand viewport when zooming out (factor < 1)', () => {
+			const fourHours = 4 * 60 * 60 * 1000;
+			const start = 0;
+			const end = fourHours;
+			const center = fourHours / 2;
+
+			const result = computeZoom(start, end, 0.5, center, Infinity);
+
+			const newDuration = result.viewEnd - result.viewStart;
+			expect(newDuration).toBe(fourHours * 2); // 8 hours
+		});
+
+		it('should keep anchor point at the same screen proportion', () => {
+			const start = 0;
+			const end = 10000;
+			const center = 7500; // 75% across
+
+			const result = computeZoom(start, end, 2, center, Infinity);
+
+			const newDuration = result.viewEnd - result.viewStart;
+			const ratio = (center - result.viewStart) / newDuration;
+
+			// The ratio should stay at 0.75
+			expect(ratio).toBeCloseTo(0.75, 10);
+		});
+
+		it('should not zoom below MIN_VIEWPORT_MS (1 hour)', () => {
+			const oneHour = 60 * 60 * 1000;
+			const start = 0;
+			const end = oneHour; // already at 1 hour
+
+			// Try to zoom in further
+			const result = computeZoom(start, end, 10, oneHour / 2, Infinity);
+
+			const newDuration = result.viewEnd - result.viewStart;
+			expect(newDuration).toBe(MIN_VIEWPORT_MS);
+		});
+
+		it('should not zoom above MAX_VIEWPORT_MS (14 days)', () => {
+			const fourteenDays = 14 * 24 * 60 * 60 * 1000;
+			const start = 0;
+			const end = fourteenDays; // already at max
+
+			// Try to zoom out further
+			const result = computeZoom(start, end, 0.1, fourteenDays / 2, Infinity);
+
+			const newDuration = result.viewEnd - result.viewStart;
+			expect(newDuration).toBe(MAX_VIEWPORT_MS);
+		});
+
+		it('should clamp viewport end to now (no future viewing)', () => {
+			const fourHours = 4 * 60 * 60 * 1000;
+			const now = fourHours;
+			const start = 0;
+			const end = fourHours; // right at present
+
+			// Zoom out — would normally expand past now
+			const center = fourHours / 2;
+			const result = computeZoom(start, end, 0.5, center, now);
+
+			expect(result.viewEnd).toBe(now);
+			expect(result.viewStart).toBe(now - fourHours * 2); // duration doubled
+		});
+
+		it('should handle zoom in then pan correctly', () => {
+			// Start with 10-hour viewport
+			const tenHours = 10 * 60 * 60 * 1000;
+			let start = 0;
+			let end = tenHours;
+
+			// Zoom in 2x at center
+			const zoom1 = computeZoom(start, end, 2, tenHours / 2, Infinity);
+			start = zoom1.viewStart;
+			end = zoom1.viewEnd;
+
+			// Duration should be 5 hours
+			expect(end - start).toBe(tenHours / 2);
+
+			// Simulate a pan (shift 1 hour left)
+			const oneHour = 60 * 60 * 1000;
+			start -= oneHour;
+			end -= oneHour;
+
+			// Zoom in again at center of new viewport
+			const center2 = start + (end - start) / 2;
+			const zoom2 = computeZoom(start, end, 2, center2, Infinity);
+
+			// Should now be ~2.5 hours
+			const finalDuration = zoom2.viewEnd - zoom2.viewStart;
+			expect(finalDuration).toBe(tenHours / 4);
+		});
+	});
+});

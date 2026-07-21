@@ -4,6 +4,7 @@ export { default as Backdrop } from './Backdrop.svelte';
 export { default as BottomSheet } from './BottomSheet.svelte';
 export { default as Modal } from './Modal.svelte';
 export { default as Overlay } from './Overlay.svelte';
+export { default as RangeSlider } from './RangeSlider.svelte';
 export { default as ResizablePanel } from './ResizablePanel.svelte';
 export { default as Sheet } from './Sheet.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
