@@ -26,7 +26,7 @@
 <Demo
 	title="Variants"
 	description="Seven variants including 'contrast', the inverted-outline style from OpenElectricity."
-	code={`<Button variant="primary">Primary</Button>\n<Button variant="contrast">Contrast</Button>`}
+	code={'<Button variant="primary">Primary</Button>\n<Button variant="contrast">Contrast</Button>'}
 >
 	<div class="row">
 		{#each variants as variant (variant)}
