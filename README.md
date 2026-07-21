@@ -1,7 +1,6 @@
 # stratum-ui
 
-Svelte 5 UI and charting components, extracted from the
-[OpenElectricity](https://openelectricity.org.au) design system. Charts are
+Svelte 5 UI and charting components. Charts are
 built on [LayerCake](https://layercake.graphics) with runes-based state
 stores; everything is themed with CSS custom properties — no Tailwind, no
 runtime styling dependencies.
@@ -69,7 +68,7 @@ values both work — theme switches recolour live charts with no JS.
 ### Fonts
 
 The library never bundles fonts — theme files reference family names with
-system fallbacks. For the full Theme 1 (OpenElectricity) look:
+system fallbacks. For the full Theme 1 (OE) look:
 
 ```bash
 pnpm add -D @fontsource-variable/dm-sans @fontsource-variable/space-grotesk @fontsource/dm-mono

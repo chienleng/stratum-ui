@@ -26,11 +26,7 @@
 
 <h1>Buttons</h1>
 
-<Demo
-	title="Variants"
-	description="Seven variants including 'contrast', the inverted-outline style from OpenElectricity."
-	code={variantsCode}
->
+<Demo title="Variants" description="Seven variants including 'contrast'." code={variantsCode}>
 	<div class="row">
 		{#each variants as variant (variant)}
 			<Button {variant}>{variant}</Button>

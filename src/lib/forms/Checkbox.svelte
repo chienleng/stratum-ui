@@ -1,10 +1,4 @@
 <script lang="ts">
-	/**
-	 * Checkbox — consolidation of OpenElectricity's Checkbox, Checkbox2 and
-	 * CheckboxNew. CheckboxNew's custom-box look is canonical; Checkbox2's
-	 * bindable `indeterminate` is kept (and, unlike the source, actually
-	 * rendered — as a dash — since the native input is visually hidden).
-	 */
 	interface Props {
 		name?: string;
 		label?: string;

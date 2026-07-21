@@ -4,7 +4,7 @@ import { seriesVar, SERIES_PALETTE_SIZE } from './tokens.js';
  * Maps a series id to a CSS colour. Charts in stratum-ui are colour-agnostic:
  * they take `seriesColours` records and apply the values via style properties,
  * so a "colour" can be a hex string or a `var(--…)` reference. Consumers with
- * domain palettes (e.g. OpenElectricity's fuel-tech map) plug them in here.
+ * domain palettes (e.g. OE's fuel-tech map) plug them in here.
  */
 export type SeriesColourResolver = (seriesId: string) => string;
 

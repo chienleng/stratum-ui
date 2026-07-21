@@ -1,7 +1,7 @@
 /**
  * Chart type definitions.
  *
- * These are explicit exports — unlike the openelectricity source, stratum-ui
+ * These are explicit exports — unlike the OE source, stratum-ui
  * has no ambient global types; import what you need.
  */
 import type { SiPrefix } from '../utils/si-units.js';

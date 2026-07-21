@@ -10,7 +10,7 @@ import { collectSeriesByTimestamp, orderSeriesIds, rowsFromSeriesMaps } from './
 // ============================================
 
 /**
- * The OpenElectricity constants the manager used to hard-code, now injected
+ * The OE constants the manager used to hard-code, now injected
  * via the neutral config options. Values match the old constants exactly so
  * the numeric expectations below are unchanged.
  */
@@ -36,7 +36,7 @@ interface ProcessFacilityPowerConfig {
 
 /**
  * Process a facility power API response into chart-ready data — a local port
- * of openelectricity's process-facility-power.js (a thin wrapper over the
+ * of OE's process-facility-power.js (a thin wrapper over the
  * shared timestamp-union core in series-rows.js), reproduced here so the test
  * wiring matches the source suite exactly.
  */

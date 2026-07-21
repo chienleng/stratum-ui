@@ -162,7 +162,7 @@
 		text-underline-offset: 4px;
 	}
 
-	/* Inverted-outline look (OpenElectricity's "Button2"): surface with a
+	/* Inverted-outline look (OE's "Button2"): surface with a
 	   strong border that inverts to the dark surface on hover. */
 	.su-button[data-variant='contrast'] {
 		--_bg: var(--su-surface, #ffffff);

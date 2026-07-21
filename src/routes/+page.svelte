@@ -10,7 +10,6 @@
 	<h1>stratum-ui</h1>
 	<p class="lede">
 		Svelte 5 UI and LayerCake charting components, themed entirely with CSS custom properties.
-		Extracted from the OpenElectricity design system.
 	</p>
 	<pre class="install"><code>pnpm add stratum-ui</code></pre>
 	<div class="swatches" aria-hidden="true">
