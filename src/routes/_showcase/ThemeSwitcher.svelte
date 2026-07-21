@@ -3,7 +3,8 @@
 
 	const options: { value: ThemeName; label: string }[] = [
 		{ value: 'openelectricity', label: 'OpenElectricity' },
-		{ value: 'neutral', label: 'Neutral' }
+		{ value: 'neutral', label: 'Neutral' },
+		{ value: 'furrow', label: 'Furrow' }
 	];
 </script>
 

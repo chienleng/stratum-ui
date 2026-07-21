@@ -1,0 +1,163 @@
+/**
+ * stratum-ui · Furrow theme
+ *
+ * Derived from the Furrow web-app design system: slate neutrals, dark
+ * primary actions, blue-500 as the data accent, square corners and
+ * deliberately light shadows. Fonts are Inter (body) and JetBrains Mono
+ * (headings and data).
+ *
+ * Fully self-contained: copy this whole file into any project, or
+ * `import 'stratum-ui/themes/furrow.css'`.
+ *
+ * Custom-property declarations only — no element rules, no resets, so this
+ * file can never leak styles into a consuming app.
+ *
+ * The `:where(:root)` arm has zero specificity: importing a single theme
+ * applies it globally with nothing else required. When several theme files
+ * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
+ * `document.documentElement.dataset.theme` switches themes at runtime.
+ *
+ * Fonts are referenced but NOT bundled. For the full Furrow look:
+ *   pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono
+ * and import them once in your root layout. Without them, the stacks below
+ * fall back to system fonts.
+ *
+ * `data-mode` is reserved for a future dark mode; this theme is light-only.
+ */
+:where(:root),
+[data-theme='furrow'] {
+	/* ── primitives (Furrow slate ramp + accents — not part of the themed API) ── */
+	--su-fw-slate-50: #f8fafc;
+	--su-fw-slate-100: #f1f5f9;
+	--su-fw-slate-200: #e2e8f0;
+	--su-fw-slate-300: #cbd5e1;
+	--su-fw-slate-400: #94a3b8;
+	--su-fw-slate-500: #64748b;
+	--su-fw-slate-600: #475569;
+	--su-fw-slate-700: #334155;
+	--su-fw-slate-800: #1e293b;
+	--su-fw-slate-900: #0f172a;
+	--su-fw-blue: #3b82f6;
+	--su-fw-sky: #0ea5e9;
+
+	/* ── typography ───────────────────────────────────────────────────── */
+	--su-font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+	--su-font-display: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+	--su-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+	--su-font-size-2xs: 0.625rem;
+	--su-font-size-xs: 0.75rem;
+	--su-font-size-sm: 0.875rem;
+	--su-font-size-md: 1rem;
+	--su-font-size-lg: 1.25rem;
+	--su-font-size-xl: 1.5rem;
+	--su-font-size-2xl: 1.75rem;
+	--su-font-size-3xl: 2.25rem;
+	--su-font-size-4xl: 2.5rem;
+
+	--su-font-weight-normal: 400;
+	--su-font-weight-medium: 500;
+	--su-font-weight-semibold: 600;
+
+	--su-leading-none: 1;
+	--su-leading-tight: 1.1;
+	--su-leading-snug: 1.25;
+	--su-leading-normal: 1.5;
+
+	--su-tracking-wide: 0.02em;
+	--su-tracking-wider: 0.045em;
+	--su-tracking-widest: 0.09em;
+
+	/* ── spacing ──────────────────────────────────────────────────────── */
+	--su-space-1: 0.25rem;
+	--su-space-2: 0.5rem;
+	--su-space-3: 0.75rem;
+	--su-space-4: 1rem;
+	--su-space-5: 1.25rem;
+	--su-space-6: 1.5rem;
+	--su-space-8: 2rem;
+	--su-space-10: 2.5rem;
+	--su-space-12: 3rem;
+	--su-space-16: 4rem;
+
+	/* ── radii (Furrow is square: cards use 4px, chips stay full) ────── */
+	--su-radius-xs: 2px;
+	--su-radius-sm: 2px;
+	--su-radius-md: 4px;
+	--su-radius-lg: 4px;
+	--su-radius-xl: 6px;
+	--su-radius-full: 9999px;
+
+	/* ── shadows (deliberately light — no heavy elevation) ───────────── */
+	--su-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	--su-shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+	--su-shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+
+	/* ── z-scale ──────────────────────────────────────────────────────── */
+	--su-z-dropdown: 1000;
+	--su-z-sticky: 1020;
+	--su-z-modal: 1100;
+	--su-z-tooltip: 1200;
+	--su-z-toast: 1300;
+
+	/* ── motion ───────────────────────────────────────────────────────── */
+	--su-duration-fast: 150ms;
+	--su-duration-normal: 250ms;
+	--su-ease: cubic-bezier(0.2, 0, 0, 1);
+
+	/* ── focus ────────────────────────────────────────────────────────── */
+	--su-focus-ring-width: 3px;
+	--su-focus-ring: rgb(15 23 42 / 0.35);
+
+	/* ── semantic colours ─────────────────────────────────────────────── */
+	--su-surface: #ffffff;
+	--su-surface-muted: var(--su-fw-slate-50);
+	--su-surface-strong: var(--su-fw-slate-100);
+	--su-surface-inverse: var(--su-fw-slate-900);
+
+	--su-text: var(--su-fw-slate-900);
+	--su-text-muted: var(--su-fw-slate-500);
+	--su-text-subtle: var(--su-fw-slate-400);
+	--su-text-inverse: #ffffff;
+
+	--su-accent: var(--su-fw-slate-900);
+	--su-accent-hover: var(--su-fw-slate-800);
+	--su-accent-contrast: #ffffff;
+
+	--su-border: var(--su-fw-slate-200);
+	--su-border-strong: var(--su-fw-slate-300);
+	--su-border-emphasis: var(--su-fw-slate-500);
+
+	--su-danger: #dc2626;
+	--su-success: #16a34a;
+	--su-warning: #d97706;
+
+	--su-overlay: rgb(15 23 42 / 0.4);
+	--su-tooltip-bg: var(--su-fw-slate-900);
+	--su-tooltip-text: var(--su-fw-slate-50);
+
+	/* ── chart tokens (blue-500 is Furrow's data accent) ─────────────── */
+	--su-chart-surface: #ffffff;
+	--su-chart-grid: var(--su-fw-slate-200);
+	--su-chart-grid-strong: var(--su-fw-slate-700);
+	--su-chart-axis-text: var(--su-fw-slate-400);
+	--su-chart-axis-font-size: var(--su-font-size-2xs);
+	--su-chart-tick: var(--su-fw-slate-600);
+	--su-chart-focus: var(--su-fw-blue);
+	--su-chart-brush-handle: var(--su-fw-slate-700);
+	--su-chart-brush-selection: rgb(59 130 246 / 0.15);
+	--su-chart-annotation: var(--su-fw-slate-500);
+
+	--su-chart-series-1: #3b82f6;
+	--su-chart-series-2: #0ea5e9;
+	--su-chart-series-3: #10b981;
+	--su-chart-series-4: #f59e0b;
+	--su-chart-series-5: #8b5cf6;
+	--su-chart-series-6: #14b8a6;
+	--su-chart-series-7: #f43f5e;
+	--su-chart-series-8: #84cc16;
+	--su-chart-series-9: #6366f1;
+	--su-chart-series-10: #f97316;
+	--su-chart-series-11: #06b6d4;
+	--su-chart-series-12: #a855f7;
+}

@@ -1,4 +1,6 @@
-export type ThemeName = 'openelectricity' | 'neutral';
+export type ThemeName = 'openelectricity' | 'neutral' | 'furrow';
+
+const THEMES: ThemeName[] = ['openelectricity', 'neutral', 'furrow'];
 
 let current = $state<ThemeName>('openelectricity');
 
@@ -17,6 +19,6 @@ export const theme = {
 	},
 	init() {
 		const attr = document.documentElement.dataset.theme;
-		if (attr === 'neutral' || attr === 'openelectricity') current = attr;
+		if (THEMES.includes(attr as ThemeName)) current = attr as ThemeName;
 	}
 };

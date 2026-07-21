@@ -7,8 +7,12 @@
 		<meta name="text-scale" content="scale" />
 		<script>
 			// Set the theme before first paint to avoid a flash of the wrong theme.
-			document.documentElement.dataset.theme =
-				localStorage.getItem('su-theme') === 'neutral' ? 'neutral' : 'openelectricity';
+			(function () {
+				var saved = localStorage.getItem('su-theme');
+				document.documentElement.dataset.theme = ['neutral', 'furrow'].includes(saved)
+					? saved
+					: 'openelectricity';
+			})();
 		</script>
 		%sveltekit.head%
 	</head>

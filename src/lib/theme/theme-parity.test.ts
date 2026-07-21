@@ -19,22 +19,27 @@ function declarations(css: string): Map<string, string> {
 }
 
 /** Theme primitives are namespaced per theme and excluded from parity. */
-const PRIMITIVE_PREFIXES = ['--su-oe-', '--su-gray-'];
+const PRIMITIVE_PREFIXES = ['--su-oe-', '--su-gray-', '--su-fw-'];
 const isSemantic = (name: string) => !PRIMITIVE_PREFIXES.some((p) => name.startsWith(p));
 
 const oe = read('../themes/openelectricity.css');
 const neutral = read('../themes/neutral.css');
+const furrow = read('../themes/furrow.css');
 const fuelTechs = read('../themes/fuel-techs.css');
 
+const themes = { openelectricity: oe, neutral, furrow };
+
 describe('theme parity', () => {
-	it('openelectricity and neutral define the identical semantic token set', () => {
-		const oeTokens = [...declaredNames(oe)].filter(isSemantic).sort();
-		const neutralTokens = [...declaredNames(neutral)].filter(isSemantic).sort();
-		expect(oeTokens).toEqual(neutralTokens);
+	it('every theme defines the identical semantic token set', () => {
+		const reference = [...declaredNames(oe)].filter(isSemantic).sort();
+		for (const [name, css] of Object.entries(themes)) {
+			const tokens = [...declaredNames(css)].filter(isSemantic).sort();
+			expect(tokens, `token set mismatch in ${name}`).toEqual(reference);
+		}
 	});
 
 	it('themes only reference variables they define', () => {
-		for (const css of [oe, neutral]) {
+		for (const css of Object.values(themes)) {
 			const names = declaredNames(css);
 			const referenced = [...css.matchAll(/var\((--su-[\w-]+)/g)].map((m) => m[1]);
 			for (const ref of referenced) expect(names).toContain(ref);

@@ -3,6 +3,7 @@
 	import { theme } from '../../_showcase/theme.svelte.js';
 	import oeCss from 'stratum-ui/themes/openelectricity.css?raw';
 	import neutralCss from 'stratum-ui/themes/neutral.css?raw';
+	import furrowCss from 'stratum-ui/themes/furrow.css?raw';
 	import fuelTechsCss from 'stratum-ui/themes/fuel-techs.css?raw';
 
 	const colourGroups = [
@@ -17,6 +18,7 @@
 	const themeFiles = [
 		{ name: 'openelectricity.css', css: oeCss },
 		{ name: 'neutral.css', css: neutralCss },
+		{ name: 'furrow.css', css: furrowCss },
 		{ name: 'fuel-techs.css', css: fuelTechsCss }
 	];
 

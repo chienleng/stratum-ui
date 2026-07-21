@@ -39,11 +39,13 @@ Import a theme once in your root layout, then use components:
 ## Theming
 
 Every component is styled exclusively against `--su-*` custom properties.
-Two self-contained theme files ship with the package:
+Three self-contained theme files ship with the package:
 
 - `stratum-ui/themes/openelectricity.css` — warm greys, DM Sans/Space
   Grotesk/DM Mono stacks, OE red accent
 - `stratum-ui/themes/neutral.css` — system fonts, neutral greys
+- `stratum-ui/themes/furrow.css` — slate neutrals, Inter/JetBrains Mono,
+  dark primary actions with a blue data accent, square corners
 - `stratum-ui/themes/fuel-techs.css` — optional fuel-technology palette
   (`--su-ft-*`), mirrored in JS as `fuelTechColours`
 
@@ -79,6 +81,12 @@ import '@fontsource-variable/dm-sans';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource/dm-mono/400.css';
 import '@fontsource/dm-mono/500.css';
+```
+
+For the Furrow look:
+
+```bash
+pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono
 ```
 
 ## Charts in five lines

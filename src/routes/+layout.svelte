@@ -3,8 +3,11 @@
 	import '@fontsource-variable/space-grotesk';
 	import '@fontsource/dm-mono/400.css';
 	import '@fontsource/dm-mono/500.css';
+	import '@fontsource-variable/inter';
+	import '@fontsource-variable/jetbrains-mono';
 	import 'stratum-ui/themes/openelectricity.css';
 	import 'stratum-ui/themes/neutral.css';
+	import 'stratum-ui/themes/furrow.css';
 	import 'stratum-ui/themes/fuel-techs.css';
 	import './_showcase/showcase.css';
 
