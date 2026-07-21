@@ -5,7 +5,9 @@
  * show up in the DevTools Performance panel (User Timing lane). A pass-through
  * in production builds.
  */
-export const perfSpan: <T>(name: string, fn: () => T) => T = import.meta.env.DEV
+import { DEV } from 'esm-env';
+
+export const perfSpan: <T>(name: string, fn: () => T) => T = DEV
 	? (name, fn) => {
 			const start = `${name}:start`;
 			performance.mark(start);
