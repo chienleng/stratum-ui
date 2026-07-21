@@ -41,9 +41,14 @@
 	--su-fw-sky: #0ea5e9;
 
 	/* ── typography ───────────────────────────────────────────────────── */
-	--su-font-sans: 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
-	--su-font-display: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-	--su-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+	/* 'X Variable' covers @fontsource-variable installs; plain 'X' covers
+	   Google Fonts / local installs. */
+	--su-font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, 'Segoe UI', Roboto,
+		sans-serif;
+	--su-font-display: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo,
+		monospace;
+	--su-font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo,
+		monospace;
 
 	--su-font-size-2xs: 0.625rem;
 	--su-font-size-xs: 0.75rem;
