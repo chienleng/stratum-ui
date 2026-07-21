@@ -14,6 +14,9 @@
 	] as const;
 	const sizes = ['sm', 'md', 'lg'] as const;
 
+	const variantsCode =
+		'<Button variant="primary">Primary</Button>\n<Button variant="contrast">Contrast</Button>';
+
 	let groupValue = $state('7d');
 </script>
 
@@ -26,7 +29,7 @@
 <Demo
 	title="Variants"
 	description="Seven variants including 'contrast', the inverted-outline style from OpenElectricity."
-	code={'<Button variant="primary">Primary</Button>\n<Button variant="contrast">Contrast</Button>'}
+	code={variantsCode}
 >
 	<div class="row">
 		{#each variants as variant (variant)}
