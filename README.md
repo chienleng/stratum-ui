@@ -1,65 +1,121 @@
-# Svelte library
+# stratum-ui
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+Svelte 5 UI and charting components, extracted from the
+[OpenElectricity](https://openelectricity.org.au) design system. Charts are
+built on [LayerCake](https://layercake.graphics) with runes-based state
+stores; everything is themed with CSS custom properties — no Tailwind, no
+runtime styling dependencies.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Install
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+```bash
+pnpm add stratum-ui
 ```
 
-To recreate this project with the same configuration:
+Import a theme once in your root layout, then use components:
 
-```sh
-# recreate this project
-pnpm dlx sv@0.16.4 create --template library --types ts --add prettier eslint vitest="usages:unit" sveltekit-adapter="adapter:static" --no-download-check --install pnpm stratum-ui
+```svelte
+<script>
+	import 'stratum-ui/themes/openelectricity.css'; // or themes/neutral.css
+	import { Button } from 'stratum-ui/ui';
+	import { ChartStore, StratumChart } from 'stratum-ui/charts';
+</script>
 ```
 
-## Developing
+## Entry points
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+| Import | Contents |
+| --- | --- |
+| `stratum-ui` | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps |
+| `stratum-ui/charts` | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities |
+| `stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts |
+| `stratum-ui/ui` | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, … |
+| `stratum-ui/forms` | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Toggle`, `RangeSelector` |
+| `stratum-ui/actions` | `portal`, `dropdownPosition`, `clickoutside` |
+| `stratum-ui/utils` | SI-unit conversion, number/date formatting, data transforms |
+| `stratum-ui/themes/*` | Theme CSS files (see below) |
+| `stratum-ui/icons/*.svelte` | Vendored icon components |
 
-```sh
-npm run dev
+## Theming
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+Every component is styled exclusively against `--su-*` custom properties.
+Two self-contained theme files ship with the package:
+
+- `stratum-ui/themes/openelectricity.css` — warm greys, DM Sans/Space
+  Grotesk/DM Mono stacks, OE red accent
+- `stratum-ui/themes/neutral.css` — system fonts, neutral greys
+- `stratum-ui/themes/fuel-techs.css` — optional fuel-technology palette
+  (`--su-ft-*`), mirrored in JS as `fuelTechColours`
+
+Each file declares tokens under `:where(:root), [data-theme='<name>']`:
+
+- **One theme:** import it and you're done — the zero-specificity `:root` arm
+  applies globally.
+- **Runtime switching:** import both and set
+  `document.documentElement.dataset.theme = 'neutral'` — the attribute arm
+  always wins.
+- **Copy-paste:** each file is self-contained (custom-property declarations
+  only, no resets) — paste one into any project and edit values freely.
+
+Unthemed usage degrades gracefully: every component carries Neutral-value
+fallbacks in its `var()` references.
+
+Per-component knobs exist sparingly (e.g. `--su-button-bg`); series colours
+flow through charts as plain strings, so `var(--su-chart-series-3)` and hex
+values both work — theme switches recolour live charts with no JS.
+
+### Fonts
+
+The library never bundles fonts — theme files reference family names with
+system fallbacks. For the full OpenElectricity look:
+
+```bash
+pnpm add -D @fontsource-variable/dm-sans @fontsource-variable/space-grotesk @fontsource/dm-mono
 ```
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
-
-## Building
-
-To build your library:
-
-```sh
-npm pack
+```js
+// root layout
+import '@fontsource-variable/dm-sans';
+import '@fontsource-variable/space-grotesk';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
 ```
 
-To create a production version of your showcase app:
+## Charts in five lines
 
-```sh
-npm run build
+```svelte
+<script lang="ts">
+	import { ChartStore, StratumChart } from 'stratum-ui/charts';
+
+	const chart = new ChartStore({ key: Symbol('demo'), title: 'Generation', prefix: 'M', baseUnit: 'W' });
+	chart.seriesData = rows; // [{ time, date, coal: 123, wind: 456, … }]
+	chart.seriesNames = ['coal', 'wind'];
+	chart.seriesColours = { coal: 'var(--su-chart-series-11)', wind: 'var(--su-chart-series-4)' };
+	chart.xDomain = [rows[0].time, rows.at(-1)!.time];
+</script>
+
+<StratumChart {chart} showHeader enablePan resizable />
 ```
 
-You can preview the production build with `npm run preview`.
+The showcase site (`pnpm dev`) demonstrates every component, including
+tooltip modes, pan/zoom, brushing and the live token sheet at
+`/theme/tokens` (with copy-theme-CSS buttons).
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Development
 
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```sh
-npm publish
+```bash
+pnpm install
+pnpm dev        # showcase site
+pnpm test       # vitest (280+ unit tests)
+pnpm check      # svelte-check
+pnpm lint       # prettier + eslint
+pnpm package    # build dist/ + publint
 ```
+
+## Browser support
+
+Baseline 2023+ — the styling relies on `color-mix()` and `:where()`.
+
+## Licence
+
+MIT. Icon path data vendored from [Lucide](https://lucide.dev) (ISC).
