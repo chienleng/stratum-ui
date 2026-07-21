@@ -2,8 +2,8 @@
 	import { theme, type ThemeName } from './theme.svelte.js';
 
 	const options: { value: ThemeName; label: string }[] = [
-		{ value: 'theme-1', label: 'Theme 1' },
 		{ value: 'neutral', label: 'Neutral' },
+		{ value: 'theme-1', label: 'Theme 1' },
 		{ value: 'theme-2', label: 'Theme 2' }
 	];
 </script>
