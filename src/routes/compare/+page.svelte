@@ -490,33 +490,39 @@
 
 <ComparePair
 	title="Bottom sheet"
-	description="Intentionally identical: drag/snap gestures stay hand-rolled and bits-ui's modal behaviours are disabled; the port only adds dialog role and state attributes."
+	description="Anchored inside a relatively-positioned frame, as designed. Intentionally identical: drag/snap gestures stay hand-rolled and bits-ui's modal behaviours are disabled; the port only adds dialog role and state attributes."
 >
 	{#snippet current()}
-		<Button variant="outline" onclick={() => (showBottomCurrent = true)}>Open bottom sheet</Button>
-		<BottomSheet
-			open={showBottomCurrent}
-			containerHeight={600}
-			onclose={() => (showBottomCurrent = false)}
-		>
-			<div class="sheet-body">
-				<h2>Mobile filter tray</h2>
-				<p>Drag the grip to cycle snap points, or fling down to dismiss.</p>
-			</div>
-		</BottomSheet>
+		<div class="sheet-frame">
+			<Button variant="outline" onclick={() => (showBottomCurrent = true)}>
+				Open bottom sheet
+			</Button>
+			<BottomSheet
+				open={showBottomCurrent}
+				containerHeight={420}
+				onclose={() => (showBottomCurrent = false)}
+			>
+				<div class="sheet-body">
+					<h2>Mobile filter tray</h2>
+					<p>Drag the grip to cycle snap points, or fling down to dismiss.</p>
+				</div>
+			</BottomSheet>
+		</div>
 	{/snippet}
 	{#snippet bits()}
-		<Button variant="outline" onclick={() => (showBottomBits = true)}>Open bottom sheet</Button>
-		<Bits.BottomSheet
-			open={showBottomBits}
-			containerHeight={600}
-			onclose={() => (showBottomBits = false)}
-		>
-			<div class="sheet-body">
-				<h2>Mobile filter tray</h2>
-				<p>Drag the grip to cycle snap points, or fling down to dismiss.</p>
-			</div>
-		</Bits.BottomSheet>
+		<div class="sheet-frame">
+			<Button variant="outline" onclick={() => (showBottomBits = true)}>Open bottom sheet</Button>
+			<Bits.BottomSheet
+				open={showBottomBits}
+				containerHeight={420}
+				onclose={() => (showBottomBits = false)}
+			>
+				<div class="sheet-body">
+					<h2>Mobile filter tray</h2>
+					<p>Drag the grip to cycle snap points, or fling down to dismiss.</p>
+				</div>
+			</Bits.BottomSheet>
+		</div>
 	{/snippet}
 </ComparePair>
 
@@ -573,6 +579,18 @@
 
 	.slider-stage {
 		padding: var(--su-space-6, 1.5rem) var(--su-space-4, 1rem) var(--su-space-2, 0.5rem);
+	}
+
+	/* BottomSheet anchors to its nearest positioned ancestor; without one it
+	   lands at the top of the document, off-viewport once the page scrolls. */
+	.sheet-frame {
+		position: relative;
+		height: 420px;
+		overflow: hidden;
+		padding: var(--su-space-4, 1rem);
+		border: 1px solid var(--su-border, #e9ecef);
+		border-radius: var(--su-radius-lg, 10px);
+		background: var(--su-surface-strong, #f6f8fa);
 	}
 
 	.modal-body,
