@@ -5,9 +5,9 @@
 	import '@fontsource/dm-mono/500.css';
 	import '@fontsource-variable/inter';
 	import '@fontsource-variable/jetbrains-mono';
-	import 'stratum-ui/themes/openelectricity.css';
+	import 'stratum-ui/themes/theme-1.css';
 	import 'stratum-ui/themes/neutral.css';
-	import 'stratum-ui/themes/furrow.css';
+	import 'stratum-ui/themes/theme-2.css';
 	import 'stratum-ui/themes/fuel-techs.css';
 	import './_showcase/showcase.css';
 

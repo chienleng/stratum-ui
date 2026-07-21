@@ -1,13 +1,13 @@
 /**
- * stratum-ui · Furrow theme
+ * stratum-ui · Theme 2 (derived from the Furrow web-app design system)
  *
- * Derived from the Furrow web-app design system: slate neutrals, dark
+ * Slate neutrals, dark
  * primary actions, blue-500 as the data accent, square corners and
  * deliberately light shadows. Fonts are Inter (body) and JetBrains Mono
  * (headings and data).
  *
  * Fully self-contained: copy this whole file into any project, or
- * `import 'stratum-ui/themes/furrow.css'`.
+ * `import 'stratum-ui/themes/theme-2.css'`.
  *
  * Custom-property declarations only — no element rules, no resets, so this
  * file can never leak styles into a consuming app.
@@ -17,7 +17,7 @@
  * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
  * `document.documentElement.dataset.theme` switches themes at runtime.
  *
- * Fonts are referenced but NOT bundled. For the full Furrow look:
+ * Fonts are referenced but NOT bundled. For the full Theme 2 look:
  *   pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono
  * and import them once in your root layout. Without them, the stacks below
  * fall back to system fonts.
@@ -25,7 +25,7 @@
  * `data-mode` is reserved for a future dark mode; this theme is light-only.
  */
 :where(:root),
-[data-theme='furrow'] {
+[data-theme='theme-2'] {
 	/* ── primitives (Furrow slate ramp + accents — not part of the themed API) ── */
 	--su-fw-slate-50: #f8fafc;
 	--su-fw-slate-100: #f1f5f9;

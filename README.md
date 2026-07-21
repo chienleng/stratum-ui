@@ -16,7 +16,7 @@ Import a theme once in your root layout, then use components:
 
 ```svelte
 <script>
-	import 'stratum-ui/themes/openelectricity.css'; // or themes/neutral.css
+	import 'stratum-ui/themes/theme-1.css'; // or themes/neutral.css / themes/theme-2.css
 	import { Button } from 'stratum-ui/ui';
 	import { ChartStore, StratumChart } from 'stratum-ui/charts';
 </script>
@@ -41,10 +41,10 @@ Import a theme once in your root layout, then use components:
 Every component is styled exclusively against `--su-*` custom properties.
 Three self-contained theme files ship with the package:
 
-- `stratum-ui/themes/openelectricity.css` — warm greys, DM Sans/Space
+- `stratum-ui/themes/theme-1.css` — warm greys, DM Sans/Space
   Grotesk/DM Mono stacks, OE red accent
 - `stratum-ui/themes/neutral.css` — system fonts, neutral greys
-- `stratum-ui/themes/furrow.css` — slate neutrals, Inter/JetBrains Mono,
+- `stratum-ui/themes/theme-2.css` — slate neutrals, Inter/JetBrains Mono,
   dark primary actions with a blue data accent, square corners
 - `stratum-ui/themes/fuel-techs.css` — optional fuel-technology palette
   (`--su-ft-*`), mirrored in JS as `fuelTechColours`
@@ -69,7 +69,7 @@ values both work — theme switches recolour live charts with no JS.
 ### Fonts
 
 The library never bundles fonts — theme files reference family names with
-system fallbacks. For the full OpenElectricity look:
+system fallbacks. For the full Theme 1 (OpenElectricity) look:
 
 ```bash
 pnpm add -D @fontsource-variable/dm-sans @fontsource-variable/space-grotesk @fontsource/dm-mono
@@ -83,7 +83,7 @@ import '@fontsource/dm-mono/400.css';
 import '@fontsource/dm-mono/500.css';
 ```
 
-For the Furrow look:
+For the Theme 2 (Furrow) look:
 
 ```bash
 pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono

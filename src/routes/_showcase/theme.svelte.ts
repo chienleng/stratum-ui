@@ -1,6 +1,6 @@
-export type ThemeName = 'openelectricity' | 'neutral' | 'furrow';
+export type ThemeName = 'theme-1' | 'neutral' | 'theme-2';
 
-const THEMES: ThemeName[] = ['openelectricity', 'neutral', 'furrow'];
+const THEMES: ThemeName[] = ['theme-1', 'neutral', 'theme-2'];
 
 let current = $state<ThemeName>('neutral');
 

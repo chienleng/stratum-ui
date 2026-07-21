@@ -1,8 +1,8 @@
 /**
- * stratum-ui · OpenElectricity theme
+ * stratum-ui · Theme 1 (derived from the OpenElectricity design system)
  *
  * Fully self-contained: copy this whole file into any project, or
- * `import 'stratum-ui/themes/openelectricity.css'`.
+ * `import 'stratum-ui/themes/theme-1.css'`.
  *
  * Custom-property declarations only — no element rules, no resets, so this
  * file can never leak styles into a consuming app.
@@ -12,7 +12,7 @@
  * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
  * `document.documentElement.dataset.theme` switches themes at runtime.
  *
- * Fonts are referenced but NOT bundled. For the full OpenElectricity look:
+ * Fonts are referenced but NOT bundled. For the full Theme 1 look:
  *   pnpm add -D @fontsource-variable/dm-sans @fontsource-variable/space-grotesk @fontsource/dm-mono
  * and import them once in your root layout. Without them, the stacks below
  * fall back to system fonts.
@@ -20,7 +20,7 @@
  * `data-mode` is reserved for a future dark mode; this theme is light-only.
  */
 :where(:root),
-[data-theme='openelectricity'] {
+[data-theme='theme-1'] {
 	/* ── primitives (OE brand — not part of the themed API) ───────────── */
 	--su-oe-red: #c74523;
 	--su-oe-dark-red: #963f29;

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { tokenGroups, resolveToken } from 'stratum-ui';
 	import { theme } from '../../_showcase/theme.svelte.js';
-	import oeCss from 'stratum-ui/themes/openelectricity.css?raw';
+	import theme1Css from 'stratum-ui/themes/theme-1.css?raw';
 	import neutralCss from 'stratum-ui/themes/neutral.css?raw';
-	import furrowCss from 'stratum-ui/themes/furrow.css?raw';
+	import theme2Css from 'stratum-ui/themes/theme-2.css?raw';
 	import fuelTechsCss from 'stratum-ui/themes/fuel-techs.css?raw';
 
 	const colourGroups = [
@@ -16,9 +16,9 @@
 	];
 
 	const themeFiles = [
-		{ name: 'openelectricity.css', css: oeCss },
+		{ name: 'theme-1.css', css: theme1Css },
 		{ name: 'neutral.css', css: neutralCss },
-		{ name: 'furrow.css', css: furrowCss },
+		{ name: 'theme-2.css', css: theme2Css },
 		{ name: 'fuel-techs.css', css: fuelTechsCss }
 	];
 

@@ -2,7 +2,8 @@
  * Programmatic access to the stratum-ui design tokens.
  *
  * The tokens themselves are CSS custom properties defined by the theme files
- * (`stratum-ui/themes/openelectricity.css`, `stratum-ui/themes/neutral.css`).
+ * (`stratum-ui/themes/theme-1.css`, `stratum-ui/themes/neutral.css`,
+ * `stratum-ui/themes/theme-2.css`).
  * This module provides the JS-side helpers: breakpoint constants (CSS vars
  * cannot appear in media queries), series-palette references, and a resolver
  * for the rare case where a computed value is needed (canvas, colour maths).

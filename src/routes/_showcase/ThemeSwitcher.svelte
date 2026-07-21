@@ -2,9 +2,9 @@
 	import { theme, type ThemeName } from './theme.svelte.js';
 
 	const options: { value: ThemeName; label: string }[] = [
-		{ value: 'openelectricity', label: 'Theme 1' },
+		{ value: 'theme-1', label: 'Theme 1' },
 		{ value: 'neutral', label: 'Neutral' },
-		{ value: 'furrow', label: 'Theme 2' }
+		{ value: 'theme-2', label: 'Theme 2' }
 	];
 </script>
 

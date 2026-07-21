@@ -22,16 +22,16 @@ function declarations(css: string): Map<string, string> {
 const PRIMITIVE_PREFIXES = ['--su-oe-', '--su-gray-', '--su-fw-'];
 const isSemantic = (name: string) => !PRIMITIVE_PREFIXES.some((p) => name.startsWith(p));
 
-const oe = read('../themes/openelectricity.css');
+const theme1 = read('../themes/theme-1.css');
 const neutral = read('../themes/neutral.css');
-const furrow = read('../themes/furrow.css');
+const theme2 = read('../themes/theme-2.css');
 const fuelTechs = read('../themes/fuel-techs.css');
 
-const themes = { openelectricity: oe, neutral, furrow };
+const themes = { 'theme-1': theme1, neutral, 'theme-2': theme2 };
 
 describe('theme parity', () => {
 	it('every theme defines the identical semantic token set', () => {
-		const reference = [...declaredNames(oe)].filter(isSemantic).sort();
+		const reference = [...declaredNames(theme1)].filter(isSemantic).sort();
 		for (const [name, css] of Object.entries(themes)) {
 			const tokens = [...declaredNames(css)].filter(isSemantic).sort();
 			expect(tokens, `token set mismatch in ${name}`).toEqual(reference);
@@ -48,7 +48,7 @@ describe('theme parity', () => {
 
 	it('tokenGroups lists exactly the semantic tokens the themes define', () => {
 		const listed = Object.values(tokenGroups).flat().sort();
-		const defined = [...declaredNames(oe)].filter(isSemantic).sort();
+		const defined = [...declaredNames(theme1)].filter(isSemantic).sort();
 		expect(listed).toEqual(defined);
 	});
 });
