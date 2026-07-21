@@ -29,6 +29,10 @@
 		{
 			title: 'Theme',
 			links: [{ href: '/theme/tokens', label: 'Tokens' }]
+		},
+		{
+			title: 'Migration',
+			links: [{ href: '/compare', label: 'bits-ui compare' }]
 		}
 	];
 </script>
