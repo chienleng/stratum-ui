@@ -1,0 +1,9 @@
+onlyBuiltDependencies:
+  - esbuild
+
+# pnpm 11's release-age soak guard is off for now: the lockfile was resolved
+# and fully verified (tests, svelte-check, consumer smoke test) before this
+# machine moved to pnpm 11, and several pinned versions are <24h old, which
+# would block installs and first CI runs. Consider restoring the default
+# (remove this line) once the pins have aged.
+minimumReleaseAge: 0
