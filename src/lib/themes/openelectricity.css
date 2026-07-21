@@ -1,0 +1,153 @@
+/**
+ * stratum-ui · OpenElectricity theme
+ *
+ * Fully self-contained: copy this whole file into any project, or
+ * `import 'stratum-ui/themes/openelectricity.css'`.
+ *
+ * Custom-property declarations only — no element rules, no resets, so this
+ * file can never leak styles into a consuming app.
+ *
+ * The `:where(:root)` arm has zero specificity: importing a single theme
+ * applies it globally with nothing else required. When several theme files
+ * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
+ * `document.documentElement.dataset.theme` switches themes at runtime.
+ *
+ * Fonts are referenced but NOT bundled. For the full OpenElectricity look:
+ *   pnpm add -D @fontsource-variable/dm-sans @fontsource-variable/space-grotesk @fontsource/dm-mono
+ * and import them once in your root layout. Without them, the stacks below
+ * fall back to system fonts.
+ *
+ * `data-mode` is reserved for a future dark mode; this theme is light-only.
+ */
+:where(:root),
+[data-theme='openelectricity'] {
+	/* ── primitives (OE brand — not part of the themed API) ───────────── */
+	--su-oe-red: #c74523;
+	--su-oe-dark-red: #963f29;
+	--su-oe-dark-grey: #353535;
+	--su-oe-mid-grey: #6a6a6a;
+	--su-oe-mid-warm-grey: #c6c6c6;
+	--su-oe-warm-grey: #f1f0ed;
+	--su-oe-light-warm-grey: #faf9f6;
+
+	/* ── typography ───────────────────────────────────────────────────── */
+	--su-font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	--su-font-display: 'Space Grotesk', var(--su-font-sans);
+	--su-font-mono: 'DM Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+	--su-font-size-2xs: 0.625rem;
+	--su-font-size-xs: 0.75rem;
+	--su-font-size-sm: 0.875rem;
+	--su-font-size-md: 1rem;
+	--su-font-size-lg: 1.25rem;
+	--su-font-size-xl: 1.5rem;
+	--su-font-size-2xl: 1.75rem;
+	--su-font-size-3xl: 2.25rem;
+	--su-font-size-4xl: 2.5rem;
+
+	--su-font-weight-normal: 400;
+	--su-font-weight-medium: 500;
+	--su-font-weight-semibold: 600;
+
+	--su-leading-none: 1;
+	--su-leading-tight: 1.1;
+	--su-leading-snug: 1.25;
+	--su-leading-normal: 1.5;
+
+	--su-tracking-wide: 0.02em;
+	--su-tracking-wider: 0.045em;
+	--su-tracking-widest: 0.09em;
+
+	/* ── spacing ──────────────────────────────────────────────────────── */
+	--su-space-1: 0.25rem;
+	--su-space-2: 0.5rem;
+	--su-space-3: 0.75rem;
+	--su-space-4: 1rem;
+	--su-space-5: 1.25rem;
+	--su-space-6: 1.5rem;
+	--su-space-8: 2rem;
+	--su-space-10: 2.5rem;
+	--su-space-12: 3rem;
+	--su-space-16: 4rem;
+
+	/* ── radii ────────────────────────────────────────────────────────── */
+	--su-radius-xs: 2px;
+	--su-radius-sm: 4px;
+	--su-radius-md: 5px;
+	--su-radius-lg: 8px;
+	--su-radius-xl: 12px;
+	--su-radius-full: 9999px;
+
+	/* ── shadows ──────────────────────────────────────────────────────── */
+	--su-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	--su-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+	--su-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+	/* ── z-scale ──────────────────────────────────────────────────────── */
+	--su-z-dropdown: 1000;
+	--su-z-sticky: 1020;
+	--su-z-modal: 1100;
+	--su-z-tooltip: 1200;
+	--su-z-toast: 1300;
+
+	/* ── motion ───────────────────────────────────────────────────────── */
+	--su-duration-fast: 150ms;
+	--su-duration-normal: 250ms;
+	--su-ease: cubic-bezier(0.2, 0, 0, 1);
+
+	/* ── focus ────────────────────────────────────────────────────────── */
+	--su-focus-ring-width: 3px;
+	--su-focus-ring: rgb(53 53 53 / 0.35);
+
+	/* ── semantic colours ─────────────────────────────────────────────── */
+	--su-surface: #ffffff;
+	--su-surface-muted: var(--su-oe-light-warm-grey);
+	--su-surface-strong: var(--su-oe-warm-grey);
+	--su-surface-inverse: var(--su-oe-dark-grey);
+
+	--su-text: var(--su-oe-dark-grey);
+	--su-text-muted: var(--su-oe-mid-grey);
+	--su-text-subtle: var(--su-oe-mid-warm-grey);
+	--su-text-inverse: #ffffff;
+
+	--su-accent: var(--su-oe-red);
+	--su-accent-hover: var(--su-oe-dark-red);
+	--su-accent-contrast: #ffffff;
+
+	--su-border: var(--su-oe-warm-grey);
+	--su-border-strong: var(--su-oe-mid-warm-grey);
+	--su-border-emphasis: var(--su-oe-mid-grey);
+
+	--su-danger: #fa6060;
+	--su-success: #70d26e;
+	--su-warning: #eb1f70;
+
+	--su-overlay: rgb(0 0 0 / 0.4);
+	--su-tooltip-bg: var(--su-oe-dark-grey);
+	--su-tooltip-text: #ffffff;
+
+	/* ── chart tokens ─────────────────────────────────────────────────── */
+	--su-chart-surface: #ffffff;
+	--su-chart-grid: #efefef;
+	--su-chart-grid-strong: #333333;
+	--su-chart-axis-text: var(--su-oe-mid-warm-grey);
+	--su-chart-axis-font-size: var(--su-font-size-2xs);
+	--su-chart-tick: #000000;
+	--su-chart-focus: var(--su-oe-red);
+	--su-chart-brush-handle: var(--su-oe-dark-grey);
+	--su-chart-brush-selection: rgb(0 0 0 / 0.06);
+	--su-chart-annotation: var(--su-oe-mid-grey);
+
+	--su-chart-series-1: #577cff;
+	--su-chart-series-2: #4cb9b9;
+	--su-chart-series-3: #f48e1b;
+	--su-chart-series-4: #2c7629;
+	--su-chart-series-5: #fed500;
+	--su-chart-series-6: #5ea0c0;
+	--su-chart-series-7: #c74523;
+	--su-chart-series-8: #521986;
+	--su-chart-series-9: #927bad;
+	--su-chart-series-10: #744a26;
+	--su-chart-series-11: #121212;
+	--su-chart-series-12: #6a6a6a;
+}

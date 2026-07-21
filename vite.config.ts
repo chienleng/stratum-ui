@@ -11,7 +11,12 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter(),
-			alias: { 'stratum-ui': 'src/lib' }
+			alias: {
+				'stratum-ui': 'src/lib/index.ts',
+				'stratum-ui/*': 'src/lib/*'
+			},
+			// TODO(phase 9): remove once every showcase page exists, so broken links fail the build.
+			prerender: { handleHttpError: 'warn' }
 		})
 	],
 	test: {

@@ -66,7 +66,7 @@
 			"types": "./dist/utils/index.d.ts",
 			"default": "./dist/utils/index.js"
 		},
-		"./themes/*": "./dist/theme/themes/*"
+		"./themes/*": "./dist/themes/*"
 	},
 	"peerDependencies": {
 		"svelte": "^5.0.0"
@@ -85,6 +85,9 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
+		"@fontsource-variable/dm-sans": "^5.3.0",
+		"@fontsource-variable/space-grotesk": "^5.3.0",
+		"@fontsource/dm-mono": "^5.3.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/package": "^2.5.8",

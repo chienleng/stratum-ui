@@ -1,0 +1,45 @@
+/**
+ * stratum-ui · fuel-tech palette (optional add-on)
+ *
+ * Energy fuel-technology colours from the OpenElectricity design system.
+ * Import alongside either theme when charting electricity data:
+ *   import 'stratum-ui/themes/fuel-techs.css'
+ *
+ * Theme-independent (declared once on :root at zero specificity).
+ * A JS mirror of these values ships as `fuelTechColours` in stratum-ui;
+ * a unit test keeps the two in sync.
+ */
+:where(:root) {
+	/* ── fuel technologies ────────────────────────────────────────────── */
+	--su-ft-battery-charging: #577cff;
+	--su-ft-battery-discharging: #3245c9;
+	--su-ft-bioenergy-biogas: #4cb9b9;
+	--su-ft-bioenergy-biomass: #1d7a7a;
+	--su-ft-coal-black: #121212;
+	--su-ft-coal-brown: #744a26;
+	--su-ft-distillate: #e15c34;
+	--su-ft-gas-ccgt: #fdb462;
+	--su-ft-gas-ocgt: #ffcd96;
+	--su-ft-gas-recip: #f9dcbc;
+	--su-ft-gas-steam: #f48e1b;
+	--su-ft-gas-wcmg: #b46813;
+	--su-ft-hydro: #5ea0c0;
+	--su-ft-pumps: #88afd0;
+	--su-ft-solar-utility: #fed500;
+	--su-ft-solar-thermal: #fdb200;
+	--su-ft-solar-rooftop: #fff58d;
+	--su-ft-wind: #2c7629;
+	--su-ft-nuclear: #c75338;
+	--su-ft-imports: #521986;
+	--su-ft-exports: #927bad;
+	--su-ft-interconnector: #7f7f7f;
+
+	/* ── fuel-tech groups ─────────────────────────────────────────────── */
+	--su-ft-bioenergy: #1d7a7a;
+	--su-ft-coal: #25170c;
+	--su-ft-gas: #e87809;
+	--su-ft-solar: #fed500;
+	--su-ft-renewables: #52a972;
+	--su-ft-fossils: #594929;
+	--su-ft-demand: #6a6a6a;
+}
