@@ -20,9 +20,7 @@ export default defineConfig({
 				'stratum-ui/actions': 'src/lib/actions/index.ts',
 				'stratum-ui/utils': 'src/lib/utils/index.ts',
 				'stratum-ui/*': 'src/lib/*'
-			},
-			// TODO(phase 9): remove once every showcase page exists, so broken links fail the build.
-			prerender: { handleHttpError: 'warn' }
+			}
 		})
 	],
 	test: {
