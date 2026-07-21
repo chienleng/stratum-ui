@@ -13,6 +13,12 @@ export default defineConfig({
 			adapter: adapter(),
 			alias: {
 				'stratum-ui': 'src/lib/index.ts',
+				'stratum-ui/charts/elements': 'src/lib/charts/elements/index.ts',
+				'stratum-ui/charts': 'src/lib/charts/index.ts',
+				'stratum-ui/ui': 'src/lib/ui/index.ts',
+				'stratum-ui/forms': 'src/lib/forms/index.ts',
+				'stratum-ui/actions': 'src/lib/actions/index.ts',
+				'stratum-ui/utils': 'src/lib/utils/index.ts',
 				'stratum-ui/*': 'src/lib/*'
 			},
 			// TODO(phase 9): remove once every showcase page exists, so broken links fail the build.

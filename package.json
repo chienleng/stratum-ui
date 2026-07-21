@@ -66,6 +66,11 @@
 			"types": "./dist/utils/index.d.ts",
 			"default": "./dist/utils/index.js"
 		},
+		"./icons/*": {
+			"types": "./dist/icons/*.d.ts",
+			"svelte": "./dist/icons/*",
+			"default": "./dist/icons/*"
+		},
 		"./themes/*": "./dist/themes/*"
 	},
 	"peerDependencies": {
