@@ -1,10 +1,9 @@
 <script lang="ts">
 	/**
-	 * Tabs-style switcher. Drop-in replacement for the `Switch` API but renders
-	 * as classic tabs (subtle track, raised active item) — suited to dense
-	 * control panels. Hand-rolled (no headless library): buttons with the tab
-	 * ARIA pattern and arrow-key navigation.
+	 * Tabs-style switcher with the `Switch` API. The tab ARIA pattern and
+	 * arrow-key navigation come from bits-ui Tabs (triggers only, no panels).
 	 */
+	import { Tabs } from 'bits-ui';
 
 	export interface SwitchTabButton {
 		label: string;
@@ -21,43 +20,36 @@
 	let { buttons = [], selected = '', onchange, class: className = '' }: Props = $props();
 
 	let value = $derived(String(selected));
-	let listEl = $state<HTMLElement | null>(null);
-
-	function select(newValue: string) {
-		if (newValue && newValue !== value) onchange?.(newValue);
-	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-		event.preventDefault();
-
-		const index = buttons.findIndex((b) => String(b.value) === value);
-		if (index === -1) return;
-
-		const delta = event.key === 'ArrowRight' ? 1 : -1;
-		const next = buttons[(index + delta + buttons.length) % buttons.length];
-		select(String(next.value));
-		const nextButton = listEl?.querySelector<HTMLButtonElement>(`[value="${next.value}"]`);
-		nextButton?.focus();
-	}
 </script>
 
-<div bind:this={listEl} class="su-switch-tabs {className}" role="tablist">
-	{#each buttons as { label, value: btnValue } (btnValue)}
-		{@const active = String(btnValue) === value}
-		<button
-			type="button"
-			role="tab"
-			value={String(btnValue)}
-			aria-selected={active}
-			tabindex={active ? 0 : -1}
-			onclick={() => select(String(btnValue))}
-			onkeydown={handleKeydown}
-		>
-			{label}
-		</button>
-	{/each}
-</div>
+<Tabs.Root
+	bind:value={
+		() => value,
+		(newValue) => {
+			if (newValue && newValue !== value) onchange?.(newValue);
+		}
+	}
+>
+	{#snippet child({ props })}
+		<div {...props} style="display: contents">
+			<Tabs.List>
+				{#snippet child({ props: listProps })}
+					<div {...listProps} class="su-switch-tabs {className}">
+						{#each buttons as { label, value: btnValue } (btnValue)}
+							<Tabs.Trigger value={String(btnValue)}>
+								{#snippet child({ props: triggerProps })}
+									<button {...triggerProps} value={String(btnValue)}>
+										{label}
+									</button>
+								{/snippet}
+							</Tabs.Trigger>
+						{/each}
+					</div>
+				{/snippet}
+			</Tabs.List>
+		</div>
+	{/snippet}
+</Tabs.Root>
 
 <style>
 	.su-switch-tabs {

@@ -1,8 +1,12 @@
 <script lang="ts">
 	/**
 	 * Radio rendered either as a big bordered label button, or (with
-	 * `radioOnly`) as a bare radio circle.
+	 * `radioOnly`) as a bare radio circle. Built on a single-item bits-ui
+	 * RadioGroup; unchecking of same-`name` siblings relies on the parent
+	 * updating `checked` rather than native name grouping.
 	 */
+	import { RadioGroup } from 'bits-ui';
+
 	interface Props {
 		name?: string;
 		label?: string;
@@ -24,23 +28,29 @@
 	}: Props = $props();
 </script>
 
-<label class="su-radio-big-button {className}" class:radio-only={radioOnly}>
-	<input
-		type="radio"
-		{value}
-		name={name || undefined}
-		{checked}
-		onchange={() => onchange?.(value)}
-	/>
-
-	{#if radioOnly}
-		<span class="circle" aria-hidden="true">
-			<span class="dot"></span>
-		</span>
-	{:else}
-		<span class="button-label">{label}</span>
-	{/if}
-</label>
+<RadioGroup.Root
+	value={checked ? value : ''}
+	name={checked && name ? name : undefined}
+	onValueChange={(newValue) => onchange?.(newValue)}
+>
+	{#snippet child({ props })}
+		<div {...props} class="su-radio-big-button {className}" class:radio-only={radioOnly}>
+			<RadioGroup.Item {value}>
+				{#snippet child({ props: itemProps })}
+					<button {...itemProps}>
+						{#if radioOnly}
+							<span class="circle" aria-hidden="true">
+								<span class="dot"></span>
+							</span>
+						{:else}
+							<span class="button-label">{label}</span>
+						{/if}
+					</button>
+				{/snippet}
+			</RadioGroup.Item>
+		</div>
+	{/snippet}
+</RadioGroup.Root>
 
 <style>
 	.su-radio-big-button {
@@ -50,17 +60,19 @@
 		font-family: var(--su-font-sans, system-ui, sans-serif);
 	}
 
-	/* Visually hidden but focusable — native :checked/:focus-visible drive styling. */
-	.su-radio-big-button input {
-		position: absolute;
-		width: 1px;
-		height: 1px;
+	/* The bits-ui item button replaces the hidden native input — reset it so
+	   the circle / label span carry all the visuals. */
+	.su-radio-big-button button {
+		display: flex;
+		align-items: center;
 		margin: 0;
 		padding: 0;
 		border: 0;
-		overflow: hidden;
-		clip-path: inset(50%);
-		white-space: nowrap;
+		background: none;
+		font: inherit;
+		color: inherit;
+		cursor: pointer;
+		outline: none;
 	}
 
 	/* ── radio-only circle ───────────────────────────────────────────── */
@@ -80,7 +92,7 @@
 			box-shadow var(--su-duration-fast, 150ms) var(--su-ease, ease);
 	}
 
-	input:checked + .circle {
+	button[data-state='checked'] .circle {
 		border-color: var(--su-border-emphasis, #868e96);
 	}
 
@@ -92,7 +104,7 @@
 		background-color: var(--su-surface-inverse, #16191d);
 	}
 
-	input:checked + .circle .dot {
+	button[data-state='checked'] .circle .dot {
 		display: block;
 	}
 
@@ -109,13 +121,13 @@
 			box-shadow var(--su-duration-fast, 150ms) var(--su-ease, ease);
 	}
 
-	input:checked + .button-label {
+	button[data-state='checked'] .button-label {
 		border-color: var(--su-text, #1f2328);
 		background-color: var(--su-surface-muted, #f8f9fa);
 	}
 
-	input:focus-visible + .circle,
-	input:focus-visible + .button-label {
+	button:focus-visible .circle,
+	button:focus-visible .button-label {
 		box-shadow: 0 0 0 var(--su-focus-ring-width, 3px) var(--su-focus-ring, rgb(24 24 27 / 0.35));
 	}
 </style>

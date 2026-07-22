@@ -141,7 +141,7 @@
 
 <Demo
 	title="Radio"
-	description="Native grouping with arrow-key support, plus the big-button variant."
+	description="Bindable group value shared across instances, plus the big-button variant."
 >
 	<div class="col">
 		<div class="row">

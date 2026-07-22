@@ -7,6 +7,10 @@
 </script>
 
 <script lang="ts">
+	/**
+	 * Nested checkbox tree with per-node checked/indeterminate state, composed
+	 * from `Checkbox` (self-recursive for child groups).
+	 */
 	import CheckboxTree from './CheckboxTree.svelte';
 	import Checkbox from './Checkbox.svelte';
 

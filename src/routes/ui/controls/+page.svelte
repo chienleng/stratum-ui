@@ -77,7 +77,7 @@
 
 <Demo
 	title="Tooltip"
-	description="Hand-rolled tooltip: portalled, viewport-clamped, Escape to dismiss."
+	description="Portalled and collision-aware; stays open while hovered, so links inside the tip are reachable."
 >
 	<div class="row">
 		<Tooltip text="Carbon intensity of the grid right now" side="top">

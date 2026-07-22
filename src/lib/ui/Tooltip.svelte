@@ -1,12 +1,13 @@
 <script lang="ts">
 	/**
-	 * Hover/focus tooltip. Hand-rolled (no headless library): the tip is
-	 * portalled to <body> and positioned against the trigger with fixed
-	 * coordinates, so it escapes overflow containers and stacking contexts.
+	 * Hover/focus tooltip. The tip is portalled to <body> and positioned by
+	 * bits-ui's floating layer, so it escapes overflow containers and stacking
+	 * contexts; collision handling and Escape dismissal come from bits-ui. The
+	 * tip stays open while hovered (bits-ui hoverable content), so a
+	 * `learnMoreHref` link is reliably reachable.
 	 */
+	import { Tooltip } from 'bits-ui';
 	import type { Snippet } from 'svelte';
-	import { portal } from '../actions/portal.js';
-	import getSeqId from '../utils/html-id-gen.js';
 
 	interface Props {
 		text: string;
@@ -28,115 +29,75 @@
 		learnMoreHref
 	}: Props = $props();
 
-	const id = getSeqId();
-
 	let open = $state(false);
-	let triggerEl = $state<HTMLElement | undefined>();
-	let tipEl = $state<HTMLElement | undefined>();
-	let left = $state(0);
-	let top = $state(0);
 
-	let showTimer: ReturnType<typeof setTimeout> | undefined;
+	// The trigger is the same plain (non-focusable) wrapper span as the
+	// original — consumers wrap their own focusable control, so bits-ui's
+	// tabindex is dropped to avoid a double tab stop. bits-ui's own focus
+	// handlers sit on the span and never fire (it is never focused directly),
+	// so keyboard support is restored by forwarding bubbled focus from the
+	// wrapped control into the bound open state, delayed as in the original.
+	let focusTimer: ReturnType<typeof setTimeout> | undefined;
 
-	function show() {
-		clearTimeout(showTimer);
-		showTimer = setTimeout(() => (open = true), delayDuration);
+	function onFocusIn() {
+		clearTimeout(focusTimer);
+		focusTimer = setTimeout(() => (open = true), delayDuration);
 	}
 
-	function hide() {
-		clearTimeout(showTimer);
+	function onFocusOut() {
+		clearTimeout(focusTimer);
 		open = false;
 	}
-
-	function position() {
-		if (!triggerEl || !tipEl) return;
-		const trigger = triggerEl.getBoundingClientRect();
-		const tip = tipEl.getBoundingClientRect();
-
-		let x: number;
-		let y: number;
-
-		switch (side) {
-			case 'bottom':
-				x = trigger.left + trigger.width / 2 - tip.width / 2;
-				y = trigger.bottom + sideOffset;
-				break;
-			case 'left':
-				x = trigger.left - tip.width - sideOffset;
-				y = trigger.top + trigger.height / 2 - tip.height / 2;
-				break;
-			case 'right':
-				x = trigger.right + sideOffset;
-				y = trigger.top + trigger.height / 2 - tip.height / 2;
-				break;
-			default:
-				x = trigger.left + trigger.width / 2 - tip.width / 2;
-				y = trigger.top - tip.height - sideOffset;
-		}
-
-		// Keep within the viewport with a small margin.
-		left = Math.max(8, Math.min(x, window.innerWidth - tip.width - 8));
-		top = Math.max(8, Math.min(y, window.innerHeight - tip.height - 8));
-	}
-
-	$effect(() => {
-		if (open) position();
-	});
-
-	$effect(() => {
-		if (!open) return;
-		const onKeydown = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') hide();
-		};
-		window.addEventListener('keydown', onKeydown);
-		window.addEventListener('scroll', position, true);
-		window.addEventListener('resize', position);
-		return () => {
-			window.removeEventListener('keydown', onKeydown);
-			window.removeEventListener('scroll', position, true);
-			window.removeEventListener('resize', position);
-		};
-	});
 </script>
 
-<span
-	bind:this={triggerEl}
-	role="presentation"
-	class="su-tooltip-trigger {className}"
-	aria-describedby={open ? id : undefined}
-	onmouseenter={show}
-	onmouseleave={hide}
-	onfocusin={show}
-	onfocusout={hide}
->
-	{@render children()}
-</span>
+<Tooltip.Provider {delayDuration} skipDelayDuration={0}>
+	<Tooltip.Root bind:open disableCloseOnTriggerClick>
+		<Tooltip.Trigger>
+			{#snippet child({ props })}
+				<!-- tabindex is explicitly undefined — it strips bits-ui's tabindex="0"
+				     from the spread so the wrapper span stays non-focusable, exactly as
+				     the original (the wrapped control is the tab stop). -->
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+				<span
+					{...props}
+					tabindex={undefined}
+					role="presentation"
+					class="su-tooltip-trigger {className}"
+					onfocusin={onFocusIn}
+					onfocusout={onFocusOut}
+				>
+					{@render children()}
+				</span>
+			{/snippet}
+		</Tooltip.Trigger>
 
-{#if open}
-	<div
-		use:portal
-		bind:this={tipEl}
-		{id}
-		role="tooltip"
-		class="su-tooltip"
-		data-side={side}
-		style:left="{left}px"
-		style:top="{top}px"
-	>
-		{text}
-		{#if learnMoreHref}
-			<a href={learnMoreHref} target="_blank" rel="noopener noreferrer">Learn more →</a>
-		{/if}
-	</div>
-{/if}
+		<Tooltip.Portal>
+			<Tooltip.Content {side} {sideOffset} collisionPadding={8}>
+				{#snippet child({ wrapperProps, props, open: isOpen })}
+					{#if isOpen}
+						<div {...wrapperProps}>
+							<div {...props} role="tooltip" class="su-tooltip" data-side={side}>
+								{text}
+								{#if learnMoreHref}
+									<a href={learnMoreHref} target="_blank" rel="noopener noreferrer">Learn more →</a>
+								{/if}
+							</div>
+						</div>
+					{/if}
+				{/snippet}
+			</Tooltip.Content>
+		</Tooltip.Portal>
+	</Tooltip.Root>
+</Tooltip.Provider>
 
 <style>
 	.su-tooltip-trigger {
 		display: inline-flex;
 	}
 
+	/* Positioning (fixed left/top) is handled by bits-ui's floating wrapper;
+	   the z-index set here is picked up and applied to that wrapper. */
 	.su-tooltip {
-		position: fixed;
 		z-index: var(--su-z-tooltip, 1200);
 		max-width: 14rem;
 		padding: var(--su-space-2, 0.5rem) var(--su-space-3, 0.75rem);
@@ -147,7 +108,6 @@
 		font-size: var(--su-font-size-xs, 0.75rem);
 		line-height: var(--su-leading-snug, 1.25);
 		box-shadow: var(--su-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1));
-		pointer-events: none;
 	}
 
 	.su-tooltip a {

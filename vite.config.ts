@@ -17,7 +17,6 @@ export default defineConfig({
 				'stratum-ui/charts': 'src/lib/charts/index.ts',
 				'stratum-ui/ui': 'src/lib/ui/index.ts',
 				'stratum-ui/forms': 'src/lib/forms/index.ts',
-				'stratum-ui/bits': 'src/lib/bits/index.ts',
 				'stratum-ui/actions': 'src/lib/actions/index.ts',
 				'stratum-ui/utils': 'src/lib/utils/index.ts',
 				'stratum-ui/*': 'src/lib/*'

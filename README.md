@@ -2,8 +2,9 @@
 
 Svelte 5 UI and charting components. Charts are
 built on [LayerCake](https://layercake.graphics) with runes-based state
-stores; everything is themed with CSS custom properties — no Tailwind, no
-runtime styling dependencies.
+stores; interactive components are built on [bits-ui](https://bits-ui.com)
+headless primitives; everything is themed with CSS custom properties — no
+Tailwind, no runtime styling dependencies.
 
 ## Install
 

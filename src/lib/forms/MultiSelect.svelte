@@ -13,13 +13,14 @@
 
 <script lang="ts">
 	/**
-	 * Multi-select dropdown with checkbox-style option indicators. Clicking an
-	 * option toggles it; meta/alt-clicking selects only that option. With
-	 * `staticDisplay` the options render inline instead of in a portal.
+	 * Multi-select dropdown with checkbox-style option indicators. Open/close,
+	 * outside-click, Escape, keyboard navigation and typeahead are delegated
+	 * to bits-ui Select (type="multiple"). Clicking an option toggles it;
+	 * meta/alt-clicking selects only that option. With `staticDisplay` the
+	 * options render inline instead of in a portal.
 	 */
 	import { fly } from 'svelte/transition';
-	import { portal } from '../actions/portal.js';
-	import { dropdownPosition } from '../actions/dropdown-position.js';
+	import { Select } from 'bits-ui';
 	import X from '../icons/X.svelte';
 
 	interface Props {
@@ -52,9 +53,11 @@
 		class: className = ''
 	}: Props = $props();
 
-	let showOptions = $state(false);
-	let triggerRef = $state<HTMLElement | undefined>();
-	let dropdownRef = $state<HTMLElement | undefined>();
+	let isOpen = $state(false);
+
+	// Whether the interaction that triggers the next value change carried a
+	// meta/alt modifier — the original's "solo select" gesture.
+	let soloClick = false;
 
 	let hasSelection = $derived(selected.length > 0);
 
@@ -67,17 +70,45 @@
 		return label;
 	});
 
+	/** Selectable entries only, in bits-ui `items` shape (enables typeahead). */
+	let items = $derived(
+		options.flatMap((opt) =>
+			opt.divider || opt.isGroupHeader || opt.value === undefined
+				? []
+				: [{ value: opt.value, label: opt.label }]
+		)
+	);
+
 	function isSelected(value: string | undefined) {
 		return value !== undefined && selected.includes(value);
 	}
 
-	function handleDocumentClick(e: MouseEvent) {
-		const target = e.target as Node;
-		if (triggerRef?.contains(target) || dropdownRef?.contains(target)) return;
-		showOptions = false;
+	// The parent owns the selection — mirror the original's `onchange` contract.
+	function getSelected() {
+		return selected;
 	}
 
-	function handleSelect(option: MultiSelectOption, e: MouseEvent) {
+	function setSelected(next: string[]) {
+		const solo = soloClick;
+		soloClick = false;
+		if (solo) {
+			// bits-ui reports the toggled array; the solo gesture instead keeps
+			// only the option that was clicked (whether it was selected or not).
+			const toggled =
+				next.find((v) => !selected.includes(v)) ?? selected.find((v) => !next.includes(v));
+			if (toggled !== undefined) {
+				onchange?.([toggled]);
+				return;
+			}
+		}
+		onchange?.(next);
+	}
+
+	function captureSolo(e: PointerEvent) {
+		soloClick = e.metaKey || e.altKey;
+	}
+
+	function handleStaticSelect(option: MultiSelectOption, e: MouseEvent) {
 		const value = option.value;
 		if (value === undefined) return;
 		const solo = e.metaKey || e.altKey;
@@ -94,26 +125,18 @@
 		onclear?.();
 	}
 
-	function toggleOptions() {
-		showOptions = !showOptions;
-	}
-
-	function handleTriggerKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			toggleOptions();
-		} else if (e.key === 'Escape') {
-			showOptions = false;
-		}
+	// The clear icon sits inside the bits-ui trigger, which acts on pointerdown.
+	function stopPointer(e: PointerEvent) {
+		e.stopPropagation();
 	}
 
 	function handleScroll() {
-		showOptions = false;
+		isOpen = false;
+		soloClick = false;
 	}
 </script>
 
 <svelte:window onscroll={handleScroll} />
-<svelte:document onclick={handleDocumentClick} />
 
 <div class="su-multi-select {className}" data-compact={compact || undefined}>
 	{#if staticDisplay}
@@ -126,46 +149,7 @@
 				</button>
 			{/if}
 		</div>
-	{:else}
-		<div
-			bind:this={triggerRef}
-			role="button"
-			tabindex="0"
-			class="trigger"
-			class:open={showOptions}
-			aria-haspopup="listbox"
-			aria-expanded={showOptions}
-			onclick={toggleOptions}
-			onkeydown={handleTriggerKeydown}
-		>
-			<span class="value">{displayLabel}</span>
 
-			<span class="trigger-icons">
-				{#if hasSelection && onclear}
-					<button type="button" class="clear-icon" onclick={handleClear} title="Clear selection">
-						<X size={12} />
-					</button>
-				{/if}
-				<svg
-					class="chevron"
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.5"
-					stroke="currentColor"
-					aria-hidden="true"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
-					/>
-				</svg>
-			</span>
-		</div>
-	{/if}
-
-	{#if staticDisplay}
 		<ul class="list static" role="listbox" aria-multiselectable="true">
 			{#each options as opt (opt.value)}
 				{#if opt.divider}
@@ -178,7 +162,7 @@
 							type="button"
 							role="option"
 							aria-selected={isSelected(opt.value)}
-							onclick={(e) => handleSelect(opt, e)}
+							onclick={(e) => handleStaticSelect(opt, e)}
 						>
 							<span class="box" aria-hidden="true">
 								<svg viewBox="0 0 20 20" fill="currentColor">
@@ -200,59 +184,131 @@
 				{/if}
 			{/each}
 		</ul>
-	{:else if showOptions}
-		<ul
-			bind:this={dropdownRef}
-			use:portal
-			use:dropdownPosition={{ trigger: triggerRef, align, position }}
-			class="list dropdown"
-			role="listbox"
-			aria-multiselectable="true"
-			in:fly={{ y: -5, duration: 150 }}
-			out:fly={{ y: -5, duration: 150 }}
-		>
-			{#each options as opt (opt.value)}
-				{#if opt.divider}
-					<li class="divider" role="presentation"><span></span></li>
-				{:else if opt.isGroupHeader}
-					<li class="group-header" role="presentation">{opt.label}</li>
-				{:else}
-					<li role="presentation">
-						<button
-							type="button"
-							role="option"
-							aria-selected={isSelected(opt.value)}
-							onclick={(e) => handleSelect(opt, e)}
-						>
-							<span class="option-main">
-								{#if withColours}
-									<span class="swatch" style="background-color: {opt.colour}"></span>
-								{/if}
-								<span class="option-label">{opt.label}</span>
-							</span>
+	{:else}
+		<Select.Root type="multiple" {items} bind:open={isOpen} bind:value={getSelected, setSelected}>
+			<Select.Trigger>
+				{#snippet child({ props })}
+					<div role="button" {...props} class="trigger" tabindex={0}>
+						<span class="value">{displayLabel}</span>
 
-							<span class="box" aria-hidden="true">
-								<svg viewBox="0 0 20 20" fill="currentColor">
-									<path
-										fill-rule="evenodd"
-										d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</span>
-						</button>
-					</li>
-				{/if}
-			{/each}
+						<span class="trigger-icons">
+							{#if hasSelection && onclear}
+								<button
+									type="button"
+									class="clear-icon"
+									onclick={handleClear}
+									onpointerdown={stopPointer}
+									title="Clear selection"
+								>
+									<X size={12} />
+								</button>
+							{/if}
+							<svg
+								class="chevron"
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								aria-hidden="true"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
+								/>
+							</svg>
+						</span>
+					</div>
+				{/snippet}
+			</Select.Trigger>
 
-			{#if hasSelection && onclear}
-				<li class="clear-item" role="presentation">
-					<button type="button" onclick={handleClear}>
-						{clearLabel}
-					</button>
-				</li>
-			{/if}
-		</ul>
+			<Select.Portal>
+				<Select.Content
+					forceMount
+					side={position}
+					align={align === 'right' ? 'end' : 'start'}
+					sideOffset={8}
+				>
+					{#snippet child({ wrapperProps, props: contentProps, open })}
+						{#if open}
+							<div {...wrapperProps}>
+								<ul
+									{...contentProps}
+									class="list dropdown"
+									data-compact={compact || undefined}
+									transition:fly={{ y: -5, duration: 150 }}
+								>
+									{#each options as opt (opt.value)}
+										{#if opt.divider}
+											<li class="divider" role="presentation"><span></span></li>
+										{:else if opt.isGroupHeader}
+											<li class="group-header" role="presentation">{opt.label}</li>
+										{:else if opt.value === undefined}
+											<!-- Valueless option: rendered but inert, like the original. -->
+											<li role="presentation">
+												<button type="button" role="option" aria-selected={isSelected(opt.value)}>
+													<span class="option-main">
+														{#if withColours}
+															<span class="swatch" style="background-color: {opt.colour}"></span>
+														{/if}
+														<span class="option-label">{opt.label}</span>
+													</span>
+
+													<span class="box" aria-hidden="true">
+														<svg viewBox="0 0 20 20" fill="currentColor">
+															<path
+																fill-rule="evenodd"
+																d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</span>
+												</button>
+											</li>
+										{:else}
+											<li role="presentation">
+												<Select.Item value={opt.value} label={opt.label}>
+													{#snippet child({ props })}
+														<button {...props} type="button" onpointerdowncapture={captureSolo}>
+															<span class="option-main">
+																{#if withColours}
+																	<span class="swatch" style="background-color: {opt.colour}"
+																	></span>
+																{/if}
+																<span class="option-label">{opt.label}</span>
+															</span>
+
+															<span class="box" aria-hidden="true">
+																<svg viewBox="0 0 20 20" fill="currentColor">
+																	<path
+																		fill-rule="evenodd"
+																		d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+																		clip-rule="evenodd"
+																	/>
+																</svg>
+															</span>
+														</button>
+													{/snippet}
+												</Select.Item>
+											</li>
+										{/if}
+									{/each}
+
+									{#if hasSelection && onclear}
+										<li class="clear-item" role="presentation">
+											<button type="button" onclick={handleClear}>
+												{clearLabel}
+											</button>
+										</li>
+									{/if}
+								</ul>
+							</div>
+						{/if}
+					{/snippet}
+				</Select.Content>
+			</Select.Portal>
+		</Select.Root>
 	{/if}
 </div>
 
@@ -282,7 +338,7 @@
 		font-size: var(--su-font-size-xs, 0.75rem);
 	}
 
-	.trigger:hover:not(.open) {
+	.trigger:hover:not([data-state='open']) {
 		background-color: var(--su-surface-strong, #f1f3f5);
 	}
 
@@ -377,8 +433,10 @@
 		margin-top: var(--su-space-1, 0.25rem);
 	}
 
+	/* Positioning is handled by the bits-ui floating wrapper; it adopts this
+	   element's z-index. The dropdown is portalled, so compact styling keys
+	   off data-compact on the list itself rather than the .su-multi-select root. */
 	.list.dropdown {
-		position: fixed;
 		max-height: 500px;
 		overflow-y: auto;
 		padding: var(--su-space-1, 0.25rem);
@@ -427,7 +485,8 @@
 		outline: none;
 	}
 
-	.list [role='option'][aria-selected='true'] {
+	.list [role='option'][aria-selected='true'],
+	.list [role='option'][data-selected] {
 		color: var(--su-text, #1f2328);
 	}
 
@@ -451,11 +510,13 @@
 		border-radius: var(--su-radius-sm, 4px);
 	}
 
-	.list.dropdown [role='option']:hover {
+	/* bits-ui highlights on hover and keyboard navigation alike. */
+	.list.dropdown [role='option']:hover,
+	.list.dropdown [role='option'][data-highlighted] {
 		background-color: var(--su-surface-strong, #f1f3f5);
 	}
 
-	.su-multi-select[data-compact] .list.dropdown [role='option'] {
+	.list.dropdown[data-compact] [role='option'] {
 		gap: var(--su-space-5, 1.25rem);
 		padding: var(--su-space-1, 0.25rem) var(--su-space-2, 0.5rem);
 	}
@@ -496,22 +557,24 @@
 		height: 14px;
 	}
 
-	.su-multi-select[data-compact] .list.dropdown .box {
+	.list.dropdown[data-compact] .box {
 		width: 12px;
 		height: 12px;
 	}
 
-	.su-multi-select[data-compact] .list.dropdown .box svg {
+	.list.dropdown[data-compact] .box svg {
 		width: 10px;
 		height: 10px;
 	}
 
-	[role='option'][aria-selected='true'] .box {
+	[role='option'][aria-selected='true'] .box,
+	[role='option'][data-selected] .box {
 		border-color: var(--su-text, #1f2328);
 		background-color: var(--su-surface-strong, #f1f3f5);
 	}
 
-	[role='option'][aria-selected='true'] .box svg {
+	[role='option'][aria-selected='true'] .box svg,
+	[role='option'][data-selected] .box svg {
 		display: block;
 	}
 
@@ -536,7 +599,7 @@
 		outline: none;
 	}
 
-	.su-multi-select[data-compact] .clear-item button {
+	.list.dropdown[data-compact] .clear-item button {
 		padding: var(--su-space-1, 0.25rem) var(--su-space-2, 0.5rem);
 	}
 

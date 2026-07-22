@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { Portal } from 'bits-ui';
 	import { fade } from 'svelte/transition';
-	import { portal } from '../actions/portal.js';
 
 	/**
-	 * Full-page modal backdrop. Portalled to <body> so it always sits above
-	 * page chrome regardless of ancestor stacking contexts (e.g. parents with
-	 * `view-transition-name`, `transform`, or `filter` create stacking traps
-	 * that can't be escaped with z-index alone).
+	 * Full-page modal backdrop. A plain dimming surface gains nothing from a
+	 * headless dialog, so the only bits-ui primitive used is Portal, which
+	 * moves the backdrop to <body> so it always
+	 * sits above page chrome regardless of ancestor stacking contexts (e.g.
+	 * parents with `view-transition-name`, `transform`, or `filter` create
+	 * stacking traps that can't be escaped with z-index alone).
 	 *
 	 * Pair with a panel/sheet/dialog that is also portalled (or rendered at
 	 * the document root) and given a higher z-index than the backdrop.
@@ -29,18 +31,21 @@
 	let { open, onclick, variant = 'modal', z = undefined, duration = 200 }: Props = $props();
 </script>
 
-{#if open}
-	<button
-		use:portal
-		type="button"
-		class="su-backdrop"
-		data-variant={variant}
-		style:z-index={z ?? null}
-		transition:fade={{ duration }}
-		onclick={() => onclick?.()}
-		aria-label="Close"
-	></button>
-{/if}
+<!-- The {#if} sits inside the Portal so open/close transitions still play
+     within the portalled subtree. -->
+<Portal>
+	{#if open}
+		<button
+			type="button"
+			class="su-backdrop"
+			data-variant={variant}
+			style:z-index={z ?? null}
+			transition:fade={{ duration }}
+			onclick={() => onclick?.()}
+			aria-label="Close"
+		></button>
+	{/if}
+</Portal>
 
 <style>
 	.su-backdrop {
