@@ -1,6 +1,10 @@
 <script lang="ts">
-	import { StackedAreaChart, type CurveType, type DataTransformType } from 'stratum-ui/charts';
-	import { SwitchTabs } from 'stratum-ui/ui';
+	import {
+		StackedAreaChart,
+		type CurveType,
+		type DataTransformType
+	} from '@chienleng/stratum-ui/charts';
+	import { SwitchTabs } from '@chienleng/stratum-ui/ui';
 	import Demo from '../../_showcase/Demo.svelte';
 	import { createEnergyChart } from '../../_showcase/chart-demo.js';
 

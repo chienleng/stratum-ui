@@ -3,7 +3,7 @@
  *
  * Energy fuel-technology colours from the OE design system.
  * Import alongside either theme when charting electricity data:
- *   import 'stratum-ui/themes/fuel-techs.css'
+ *   import '@chienleng/stratum-ui/themes/fuel-techs.css'
  *
  * Theme-independent (declared once on :root at zero specificity).
  * A JS mirror of these values ships as `fuelTechColours` in stratum-ui;

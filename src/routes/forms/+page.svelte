@@ -12,7 +12,7 @@
 		type CheckboxTreeNode,
 		type MultiSelectOption,
 		type SelectOption
-	} from 'stratum-ui/forms';
+	} from '@chienleng/stratum-ui/forms';
 	import Demo from '../_showcase/Demo.svelte';
 
 	// Settings panel composition

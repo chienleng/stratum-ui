@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { Switch, SwitchTabs, SwitchWithIcons, Tooltip, Button } from 'stratum-ui/ui';
-	import Calendar from 'stratum-ui/icons/Calendar.svelte';
-	import Move from 'stratum-ui/icons/Move.svelte';
+	import { Switch, SwitchTabs, SwitchWithIcons, Tooltip, Button } from '@chienleng/stratum-ui/ui';
+	import Calendar from '@chienleng/stratum-ui/icons/Calendar.svelte';
+	import Move from '@chienleng/stratum-ui/icons/Move.svelte';
 	import Demo from '../../_showcase/Demo.svelte';
 
 	let period = $state('week');

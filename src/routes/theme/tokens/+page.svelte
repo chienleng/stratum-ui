@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { tokenGroups, resolveToken } from 'stratum-ui';
+	import { tokenGroups, resolveToken } from '@chienleng/stratum-ui';
 	import { theme } from '../../_showcase/theme.svelte.js';
-	import theme1Css from 'stratum-ui/themes/theme-1.css?raw';
-	import neutralCss from 'stratum-ui/themes/neutral.css?raw';
-	import theme2Css from 'stratum-ui/themes/theme-2.css?raw';
-	import fuelTechsCss from 'stratum-ui/themes/fuel-techs.css?raw';
+	import theme1Css from '@chienleng/stratum-ui/themes/theme-1.css?raw';
+	import neutralCss from '@chienleng/stratum-ui/themes/neutral.css?raw';
+	import theme2Css from '@chienleng/stratum-ui/themes/theme-2.css?raw';
+	import fuelTechsCss from '@chienleng/stratum-ui/themes/fuel-techs.css?raw';
 
 	const colourGroups = [
 		{ title: 'Surface', tokens: tokenGroups.surface },

@@ -12,14 +12,14 @@ export default defineConfig({
 			},
 			adapter: adapter(),
 			alias: {
-				'stratum-ui': 'src/lib/index.ts',
-				'stratum-ui/charts/elements': 'src/lib/charts/elements/index.ts',
-				'stratum-ui/charts': 'src/lib/charts/index.ts',
-				'stratum-ui/ui': 'src/lib/ui/index.ts',
-				'stratum-ui/forms': 'src/lib/forms/index.ts',
-				'stratum-ui/actions': 'src/lib/actions/index.ts',
-				'stratum-ui/utils': 'src/lib/utils/index.ts',
-				'stratum-ui/*': 'src/lib/*'
+				'@chienleng/stratum-ui': 'src/lib/index.ts',
+				'@chienleng/stratum-ui/charts/elements': 'src/lib/charts/elements/index.ts',
+				'@chienleng/stratum-ui/charts': 'src/lib/charts/index.ts',
+				'@chienleng/stratum-ui/ui': 'src/lib/ui/index.ts',
+				'@chienleng/stratum-ui/forms': 'src/lib/forms/index.ts',
+				'@chienleng/stratum-ui/actions': 'src/lib/actions/index.ts',
+				'@chienleng/stratum-ui/utils': 'src/lib/utils/index.ts',
+				'@chienleng/stratum-ui/*': 'src/lib/*'
 			}
 		})
 	],

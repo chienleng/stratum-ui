@@ -1,7 +1,7 @@
 /**
  * Shared ChartStore factories for the chart showcase pages.
  */
-import { ChartStore, type ChartType, type SeriesRow } from 'stratum-ui/charts';
+import { ChartStore, type ChartType, type SeriesRow } from '@chienleng/stratum-ui/charts';
 import {
 	energyTimeSeries,
 	energySeriesColours,

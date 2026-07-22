@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BarChart } from 'stratum-ui/charts';
+	import { BarChart } from '@chienleng/stratum-ui/charts';
 	import Demo from '../../_showcase/Demo.svelte';
 	import { createRegionalChart } from '../../_showcase/chart-demo.js';
 

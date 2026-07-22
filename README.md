@@ -9,44 +9,44 @@ Tailwind, no runtime styling dependencies.
 ## Install
 
 ```bash
-pnpm add stratum-ui
+pnpm add @chienleng/stratum-ui
 ```
 
 Import a theme once in your root layout, then use components:
 
 ```svelte
 <script>
-	import 'stratum-ui/themes/theme-1.css'; // or themes/neutral.css / themes/theme-2.css
-	import { Button } from 'stratum-ui/ui';
-	import { ChartStore, StratumChart } from 'stratum-ui/charts';
+	import '@chienleng/stratum-ui/themes/theme-1.css'; // or themes/neutral.css / themes/theme-2.css
+	import { Button } from '@chienleng/stratum-ui/ui';
+	import { ChartStore, StratumChart } from '@chienleng/stratum-ui/charts';
 </script>
 ```
 
 ## Entry points
 
-| Import                       | Contents                                                                                                                                                                                                       |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stratum-ui`                 | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps                                                                                            |
-| `stratum-ui/charts`          | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities |
-| `stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts                                                                                                             |
-| `stratum-ui/ui`              | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, …                                                                               |
-| `stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Toggle`, `RangeSelector`                                                                                                           |
-| `stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                   |
-| `stratum-ui/utils`           | SI-unit conversion, number/date formatting, data transforms                                                                                                                                                    |
-| `stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                    |
-| `stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                       |
+| Import                                  | Contents                                                                                                                                                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@chienleng/stratum-ui`                 | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps                                                                                            |
+| `@chienleng/stratum-ui/charts`          | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities |
+| `@chienleng/stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts                                                                                                             |
+| `@chienleng/stratum-ui/ui`              | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, …                                                                               |
+| `@chienleng/stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Toggle`, `RangeSelector`                                                                                                           |
+| `@chienleng/stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                   |
+| `@chienleng/stratum-ui/utils`           | SI-unit conversion, number/date formatting, data transforms                                                                                                                                                    |
+| `@chienleng/stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                    |
+| `@chienleng/stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                       |
 
 ## Theming
 
 Every component is styled exclusively against `--su-*` custom properties.
 Three self-contained theme files ship with the package:
 
-- `stratum-ui/themes/theme-1.css` — warm greys, DM Sans/Space
+- `@chienleng/stratum-ui/themes/theme-1.css` — warm greys, DM Sans/Space
   Grotesk/DM Mono stacks, OE red accent
-- `stratum-ui/themes/neutral.css` — system fonts, neutral greys
-- `stratum-ui/themes/theme-2.css` — slate neutrals, Inter/JetBrains Mono,
+- `@chienleng/stratum-ui/themes/neutral.css` — system fonts, neutral greys
+- `@chienleng/stratum-ui/themes/theme-2.css` — slate neutrals, Inter/JetBrains Mono,
   dark primary actions with a blue data accent, square corners
-- `stratum-ui/themes/fuel-techs.css` — optional fuel-technology palette
+- `@chienleng/stratum-ui/themes/fuel-techs.css` — optional fuel-technology palette
   (`--su-ft-*`), mirrored in JS as `fuelTechColours`
 
 Each file declares tokens under `:where(:root), [data-theme='<name>']`:
@@ -93,7 +93,7 @@ pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono
 
 ```svelte
 <script lang="ts">
-	import { ChartStore, StratumChart } from 'stratum-ui/charts';
+	import { ChartStore, StratumChart } from '@chienleng/stratum-ui/charts';
 
 	const chart = new ChartStore({
 		key: Symbol('demo'),

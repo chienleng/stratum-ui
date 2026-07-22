@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Button, ButtonGroup } from 'stratum-ui/ui';
-	import Plus from 'stratum-ui/icons/Plus.svelte';
+	import { Button, ButtonGroup } from '@chienleng/stratum-ui/ui';
+	import Plus from '@chienleng/stratum-ui/icons/Plus.svelte';
 	import Demo from '../../_showcase/Demo.svelte';
 
 	const variants = [

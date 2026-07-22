@@ -6,7 +6,7 @@
  * solar as a diurnal bell, wind as smoothed noise, baseload with slow drift,
  * battery as signed charge/discharge.
  */
-import type { SeriesRow } from 'stratum-ui/charts';
+import type { SeriesRow } from '@chienleng/stratum-ui/charts';
 
 export function mulberry32(seed: number) {
 	let a = seed >>> 0;

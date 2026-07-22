@@ -2,7 +2,7 @@
  * stratum-ui · Neutral theme
  *
  * Fully self-contained: copy this whole file into any project, or
- * `import 'stratum-ui/themes/neutral.css'`.
+ * `import '@chienleng/stratum-ui/themes/neutral.css'`.
  *
  * Custom-property declarations only — no element rules, no resets, so this
  * file can never leak styles into a consuming app.

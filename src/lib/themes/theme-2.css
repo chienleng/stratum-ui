@@ -7,7 +7,7 @@
  * (headings and data).
  *
  * Fully self-contained: copy this whole file into any project, or
- * `import 'stratum-ui/themes/theme-2.css'`.
+ * `import '@chienleng/stratum-ui/themes/theme-2.css'`.
  *
  * Custom-property declarations only — no element rules, no resets, so this
  * file can never leak styles into a consuming app.

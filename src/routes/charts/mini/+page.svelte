@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MiniCharts } from 'stratum-ui/charts';
+	import { MiniCharts } from '@chienleng/stratum-ui/charts';
 	import Demo from '../../_showcase/Demo.svelte';
 	import { createEnergyChart, ENERGY_STACK_ORDER } from '../../_showcase/chart-demo.js';
 	import { energySeriesColours, energySeriesLabels } from '../../_showcase/demo-data.js';

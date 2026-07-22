@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { DateBrush, StackedAreaChart } from 'stratum-ui/charts';
+	import { DateBrush, StackedAreaChart } from '@chienleng/stratum-ui/charts';
 	import Demo from '../../_showcase/Demo.svelte';
 	import { createEnergyChart } from '../../_showcase/chart-demo.js';
 

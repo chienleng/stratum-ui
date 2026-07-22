@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { StratumChart } from 'stratum-ui/charts';
-	import { Switch } from 'stratum-ui/ui';
+	import { StratumChart } from '@chienleng/stratum-ui/charts';
+	import { Switch } from '@chienleng/stratum-ui/ui';
 	import Demo from '../../_showcase/Demo.svelte';
 	import { createEnergyChart } from '../../_showcase/chart-demo.js';
 

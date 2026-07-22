@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tokenGroups } from 'stratum-ui';
+	import { tokenGroups } from '@chienleng/stratum-ui';
 </script>
 
 <svelte:head>
@@ -11,7 +11,7 @@
 	<p class="lede">
 		Svelte 5 UI and LayerCake charting components, themed entirely with CSS custom properties.
 	</p>
-	<pre class="install"><code>pnpm add stratum-ui</code></pre>
+	<pre class="install"><code>pnpm add @chienleng/stratum-ui</code></pre>
 	<div class="swatches" aria-hidden="true">
 		{#each tokenGroups.series as token (token)}
 			<span style="background: var({token})"></span>

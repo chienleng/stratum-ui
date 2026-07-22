@@ -9,7 +9,7 @@
 		CardAction,
 		Button,
 		Skeleton
-	} from 'stratum-ui/ui';
+	} from '@chienleng/stratum-ui/ui';
 	import Demo from '../../_showcase/Demo.svelte';
 </script>
 

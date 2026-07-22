@@ -8,7 +8,7 @@
 		OptionsMenu,
 		OptionsMenuItem,
 		OptionsMenuHeading
-	} from 'stratum-ui/ui';
+	} from '@chienleng/stratum-ui/ui';
 	import Demo from '../../_showcase/Demo.svelte';
 
 	let showModal = $state(false);
