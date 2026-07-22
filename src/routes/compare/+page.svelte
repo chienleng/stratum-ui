@@ -12,10 +12,12 @@
 		type SelectOption
 	} from 'stratum-ui/forms';
 	import {
+		Backdrop,
 		BottomSheet,
 		Button,
 		Modal,
 		OptionsMenu,
+		OptionsMenuDivider,
 		OptionsMenuHeading,
 		OptionsMenuItem,
 		Overlay,
@@ -23,9 +25,12 @@
 		Sheet,
 		Switch,
 		SwitchTabs,
+		SwitchWithIcons,
 		Tooltip
 	} from 'stratum-ui/ui';
 	import * as Bits from 'stratum-ui/bits';
+	import Calendar from 'stratum-ui/icons/Calendar.svelte';
+	import Move from 'stratum-ui/icons/Move.svelte';
 	import ComparePair from '../_showcase/ComparePair.svelte';
 
 	// Shared state drives both implementations, so interacting with either
@@ -40,15 +45,24 @@
 	let toggled = $state(false);
 	let period = $state('week');
 	let tab = $state('power');
+	let view = $state('chart');
 	let range = $state<[number, number]>([20, 80]);
+
+	let menuFullscreen = $state(false);
 
 	// Overlays get per-side open state — both opening at once would overlap.
 	let showModalCurrent = $state(false);
 	let showModalBits = $state(false);
+	let showBackdropCurrent = $state(false);
+	let showBackdropBits = $state(false);
 	let showSheetCurrent = $state(false);
 	let showSheetBits = $state(false);
+	let showSheetBdCurrent = $state(false);
+	let showSheetBdBits = $state(false);
 	let showBottomCurrent = $state(false);
 	let showBottomBits = $state(false);
+
+	const ghostRange: [number, number] = [35, 65];
 
 	const regionOptions: SelectOption[] = [
 		{ label: 'All regions', isGroupHeader: true },
@@ -108,6 +122,16 @@
 		{ label: 'Energy', value: 'energy' },
 		{ label: 'Emissions', value: 'emissions' }
 	];
+
+	const viewButtons = [
+		{ label: 'Chart', value: 'chart', icon: Move },
+		{ label: 'Calendar', value: 'calendar', icon: Calendar }
+	];
+
+	const viewButtonsPlain = [
+		{ label: 'Chart', value: 'chart' },
+		{ label: 'Calendar', value: 'calendar' }
+	];
 </script>
 
 <svelte:head>
@@ -124,13 +148,35 @@
 
 <ComparePair
 	title="Select"
-	description="bits-ui side adds typeahead and full listbox keyboard support; re-selecting the active option no longer re-fires onchange."
+	description="bits-ui side adds typeahead and full listbox keyboard support; re-selecting the active option no longer re-fires onchange. The staticDisplay inline mode bypasses bits-ui entirely, so it must render identically."
 >
 	{#snippet current()}
-		<Select options={regionOptions} selected={region} onchange={(value) => (region = value)} />
+		<div class="col">
+			<Select options={regionOptions} selected={region} onchange={(value) => (region = value)} />
+			<Select
+				staticDisplay
+				label="Region"
+				options={regionOptions}
+				selected={region}
+				onchange={(value) => (region = value)}
+			/>
+		</div>
 	{/snippet}
 	{#snippet bits()}
-		<Bits.Select options={regionOptions} selected={region} onchange={(value) => (region = value)} />
+		<div class="col">
+			<Bits.Select
+				options={regionOptions}
+				selected={region}
+				onchange={(value) => (region = value)}
+			/>
+			<Bits.Select
+				staticDisplay
+				label="Region"
+				options={regionOptions}
+				selected={region}
+				onchange={(value) => (region = value)}
+			/>
+		</div>
 	{/snippet}
 </ComparePair>
 
@@ -168,11 +214,15 @@
 
 <ComparePair
 	title="Options menu"
-	description="bits-ui side gains menu keyboard navigation; items still close explicitly via the sections snippet's close()."
+	description="Sections with a divider, plus the built-in fullscreen and shortcut items. bits-ui side gains menu keyboard navigation; items still close explicitly via the sections snippet's close()."
 >
 	{#snippet current()}
 		<div class="menu-row">
-			<OptionsMenu>
+			<OptionsMenu
+				isFullscreen={menuFullscreen}
+				onfullscreenchange={() => (menuFullscreen = !menuFullscreen)}
+				onshowshortcuts={() => (menuAction = 'shortcuts')}
+			>
 				{#snippet sections({ close })}
 					<OptionsMenuHeading>Export</OptionsMenuHeading>
 					<OptionsMenuItem
@@ -191,6 +241,16 @@
 					>
 						Save as image
 					</OptionsMenuItem>
+					<OptionsMenuDivider />
+					<OptionsMenuHeading>Share</OptionsMenuHeading>
+					<OptionsMenuItem
+						onclick={() => {
+							menuAction = 'link';
+							close();
+						}}
+					>
+						Copy link
+					</OptionsMenuItem>
 				{/snippet}
 			</OptionsMenu>
 			<span class="readout">Last action: {menuAction || '(none)'}</span>
@@ -198,7 +258,11 @@
 	{/snippet}
 	{#snippet bits()}
 		<div class="menu-row">
-			<Bits.OptionsMenu>
+			<Bits.OptionsMenu
+				isFullscreen={menuFullscreen}
+				onfullscreenchange={() => (menuFullscreen = !menuFullscreen)}
+				onshowshortcuts={() => (menuAction = 'shortcuts')}
+			>
 				{#snippet sections({ close })}
 					<Bits.OptionsMenuHeading>Export</Bits.OptionsMenuHeading>
 					<Bits.OptionsMenuItem
@@ -216,6 +280,16 @@
 						}}
 					>
 						Save as image
+					</Bits.OptionsMenuItem>
+					<Bits.OptionsMenuDivider />
+					<Bits.OptionsMenuHeading>Share</Bits.OptionsMenuHeading>
+					<Bits.OptionsMenuItem
+						onclick={() => {
+							menuAction = 'link';
+							close();
+						}}
+					>
+						Copy link
 					</Bits.OptionsMenuItem>
 				{/snippet}
 			</Bits.OptionsMenu>
@@ -359,8 +433,44 @@
 </ComparePair>
 
 <ComparePair
+	title="Switch with sliding thumb"
+	description="The thumb measurement/animation stays hand-rolled on both sides; the bits-ui side gains roving focus and keys selection styling off data-state."
+>
+	{#snippet current()}
+		<div class="col">
+			<SwitchWithIcons buttons={viewButtons} selected={view} onchange={(value) => (view = value)} />
+			<SwitchWithIcons
+				compact
+				darkSelected
+				radius="full"
+				buttons={viewButtonsPlain}
+				selected={view}
+				onchange={(value) => (view = value)}
+			/>
+		</div>
+	{/snippet}
+	{#snippet bits()}
+		<div class="col">
+			<Bits.SwitchWithIcons
+				buttons={viewButtons}
+				selected={view}
+				onchange={(value) => (view = value)}
+			/>
+			<Bits.SwitchWithIcons
+				compact
+				darkSelected
+				radius="full"
+				buttons={viewButtonsPlain}
+				selected={view}
+				onchange={(value) => (view = value)}
+			/>
+		</div>
+	{/snippet}
+</ComparePair>
+
+<ComparePair
 	title="Range slider"
-	description="Known trade-off: dragging a thumb past the other swaps them on the bits-ui side (no clamp mode in the Slider primitive)."
+	description="Basic range, ghost reference range, and the read-only playhead scrubber (hand-rolled on both sides). Known trade-off: dragging a thumb past the other swaps them on the bits-ui side (no clamp mode in the Slider primitive)."
 >
 	{#snippet current()}
 		<div class="slider-stage">
@@ -371,6 +481,15 @@
 				formatValue={(v) => `${v}%`}
 				onchange={(value) => (range = value)}
 			/>
+			<RangeSlider
+				min={0}
+				max={100}
+				value={range}
+				{ghostRange}
+				formatValue={(v) => `${v}%`}
+				onchange={(value) => (range = value)}
+			/>
+			<RangeSlider min={0} max={100} playheadPosition={62} formatValue={(v) => `${v}%`} />
 		</div>
 	{/snippet}
 	{#snippet bits()}
@@ -382,6 +501,15 @@
 				formatValue={(v) => `${v}%`}
 				onchange={(value) => (range = value)}
 			/>
+			<Bits.RangeSlider
+				min={0}
+				max={100}
+				value={range}
+				{ghostRange}
+				formatValue={(v) => `${v}%`}
+				onchange={(value) => (range = value)}
+			/>
+			<Bits.RangeSlider min={0} max={100} playheadPosition={62} formatValue={(v) => `${v}%`} />
 		</div>
 	{/snippet}
 </ComparePair>
@@ -465,23 +593,67 @@
 </ComparePair>
 
 <ComparePair
-	title="Sheet"
-	description="With a backdrop the bits-ui side adds focus trap and scroll lock; closed panels are now inert instead of tabbable off-screen."
+	title="Backdrop"
+	description="Thin port by design — a headless library adds nothing to a plain dim surface, so bits-ui only supplies the portal. Click the dim area to dismiss."
 >
 	{#snippet current()}
-		<Button variant="outline" onclick={() => (showSheetCurrent = true)}>Open sheet</Button>
+		<Button variant="outline" onclick={() => (showBackdropCurrent = true)}>Show backdrop</Button>
+		<Backdrop open={showBackdropCurrent} onclick={() => (showBackdropCurrent = false)} />
+	{/snippet}
+	{#snippet bits()}
+		<Button variant="outline" onclick={() => (showBackdropBits = true)}>Show backdrop</Button>
+		<Bits.Backdrop open={showBackdropBits} onclick={() => (showBackdropBits = false)} />
+	{/snippet}
+</ComparePair>
+
+<ComparePair
+	title="Sheet"
+	description="Plain sheet is non-modal on both sides (Escape closes). With a backdrop the bits-ui side adds a focus trap and scroll lock; closed panels are now inert instead of tabbable off-screen."
+>
+	{#snippet current()}
+		<div class="row">
+			<Button variant="outline" onclick={() => (showSheetCurrent = true)}>Open sheet</Button>
+			<Button variant="outline" onclick={() => (showSheetBdCurrent = true)}>
+				Open sheet with backdrop
+			</Button>
+		</div>
 		<Sheet open={showSheetCurrent} onclose={() => (showSheetCurrent = false)}>
 			<div class="sheet-body">
 				<h2>Facility details</h2>
 				<p>Sheets suit inspector-style side content next to a chart or map.</p>
 			</div>
 		</Sheet>
+		<Sheet
+			open={showSheetBdCurrent}
+			backdrop
+			title="Facility details"
+			onclose={() => (showSheetBdCurrent = false)}
+		>
+			<div class="sheet-body">
+				<p>Sheets suit inspector-style side content next to a chart or map.</p>
+			</div>
+		</Sheet>
 	{/snippet}
 	{#snippet bits()}
-		<Button variant="outline" onclick={() => (showSheetBits = true)}>Open sheet</Button>
+		<div class="row">
+			<Button variant="outline" onclick={() => (showSheetBits = true)}>Open sheet</Button>
+			<Button variant="outline" onclick={() => (showSheetBdBits = true)}>
+				Open sheet with backdrop
+			</Button>
+		</div>
 		<Bits.Sheet open={showSheetBits} onclose={() => (showSheetBits = false)}>
 			<div class="sheet-body">
 				<h2>Facility details</h2>
+				<p>Sheets suit inspector-style side content next to a chart or map.</p>
+			</div>
+		</Bits.Sheet>
+		<Bits.Sheet
+			open={showSheetBdBits}
+			backdrop
+			title="Facility details"
+			onclose={() => (showSheetBdBits = false)}
+		>
+			<div class="sheet-body">
 				<p>Sheets suit inspector-style side content next to a chart or map.</p>
 			</div>
 		</Bits.Sheet>
@@ -578,6 +750,9 @@
 	}
 
 	.slider-stage {
+		display: flex;
+		flex-direction: column;
+		gap: var(--su-space-8, 2rem);
 		padding: var(--su-space-6, 1.5rem) var(--su-space-4, 1rem) var(--su-space-2, 0.5rem);
 	}
 

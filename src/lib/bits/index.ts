@@ -18,6 +18,7 @@ export { default as Select, type SelectOption } from './Select.svelte';
 export { default as Sheet } from './Sheet.svelte';
 export { default as Switch, type SwitchButton } from './Switch.svelte';
 export { default as SwitchTabs, type SwitchTabButton } from './SwitchTabs.svelte';
+export { default as SwitchWithIcons, type SwitchIconButton } from './SwitchWithIcons.svelte';
 export { default as Toggle } from './Toggle.svelte';
 export { default as Tooltip } from './Tooltip.svelte';
 export { default as OptionsMenu } from './options-menu/OptionsMenu.svelte';
