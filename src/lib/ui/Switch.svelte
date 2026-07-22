@@ -1,7 +1,11 @@
 <script lang="ts">
 	/**
-	 * Pill-style segmented switch.
+	 * Pill-style segmented switch, built on bits-ui ToggleGroup (single).
+	 * Roving focus with arrow keys; selection styling keys off data-state,
+	 * and deselecting the active segment is guarded so a selection always
+	 * remains.
 	 */
+	import { ToggleGroup } from 'bits-ui';
 	import type { Component } from 'svelte';
 
 	export interface SwitchButton {
@@ -28,25 +32,37 @@
 	}: Props = $props();
 
 	let isSelected = $derived((value: string | number) => selected === value);
+	let groupValue = $derived(String(buttons.find((b) => b.value === selected)?.value ?? ''));
 </script>
 
-<div class="su-switch {className}" data-size={size}>
-	{#each buttons as { label, value, icon: IconComponent } (value)}
-		<button
-			type="button"
-			{value}
-			aria-pressed={isSelected(value)}
-			onclick={() => onchange?.(String(value))}
-		>
-			{label}
-			{#if IconComponent}
-				<span class="icon" class:revealed={isSelected(value)}>
-					<IconComponent />
-				</span>
-			{/if}
-		</button>
-	{/each}
-</div>
+<ToggleGroup.Root
+	type="single"
+	bind:value={
+		() => groupValue,
+		(newValue) => {
+			if (newValue) onchange?.(newValue);
+		}
+	}
+>
+	{#snippet child({ props })}
+		<div {...props} class="su-switch {className}" data-size={size}>
+			{#each buttons as { label, value, icon: IconComponent } (value)}
+				<ToggleGroup.Item value={String(value)}>
+					{#snippet child({ props: itemProps })}
+						<button {...itemProps}>
+							{label}
+							{#if IconComponent}
+								<span class="icon" class:revealed={isSelected(value)}>
+									<IconComponent />
+								</span>
+							{/if}
+						</button>
+					{/snippet}
+				</ToggleGroup.Item>
+			{/each}
+		</div>
+	{/snippet}
+</ToggleGroup.Root>
 
 <style>
 	.su-switch {
@@ -92,7 +108,7 @@
 		box-shadow: 0 0 0 var(--su-focus-ring-width, 3px) var(--su-focus-ring, rgb(24 24 27 / 0.35));
 	}
 
-	button[aria-pressed='true'] {
+	button[data-state='on'] {
 		background: var(--su-surface, #ffffff);
 		color: var(--su-text, #1f2328);
 		border-color: var(--su-text, #1f2328);

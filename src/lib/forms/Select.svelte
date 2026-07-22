@@ -12,12 +12,13 @@
 
 <script lang="ts">
 	/**
-	 * Single-select dropdown with radio-style option indicators. With
-	 * `staticDisplay` the options render inline instead of in a portal.
+	 * Single-select dropdown with radio-style option indicators. Open/close,
+	 * outside-click, Escape, keyboard navigation and typeahead are delegated
+	 * to bits-ui Select. With `staticDisplay` the options render inline
+	 * instead of in a portal.
 	 */
 	import { fly } from 'svelte/transition';
-	import { portal } from '../actions/portal.js';
-	import { dropdownPosition } from '../actions/dropdown-position.js';
+	import { Select } from 'bits-ui';
 
 	interface Props {
 		selected?: string;
@@ -44,67 +45,39 @@
 		class: className = ''
 	}: Props = $props();
 
-	let showOptions = $state(false);
-	let triggerRef = $state<HTMLElement | undefined>();
-	let dropdownRef = $state<HTMLElement | undefined>();
-
 	let displayLabel = $derived.by(() => {
 		const find = options.find((opt) => !opt.isGroupHeader && opt.value === selected);
 		return find ? find.label : selected || label;
 	});
 
-	function handleDocumentClick(e: MouseEvent) {
-		const target = e.target as Node;
-		if (triggerRef?.contains(target) || dropdownRef?.contains(target)) return;
-		showOptions = false;
+	/** Selectable entries only, in bits-ui `items` shape (enables typeahead). */
+	let items = $derived(
+		options.flatMap((opt) =>
+			opt.divider || opt.isGroupHeader || opt.value === undefined
+				? []
+				: [{ value: opt.value, label: opt.label }]
+		)
+	);
+
+	// The parent owns the selection — mirror the original's `onchange` contract.
+	function getValue() {
+		return selected ?? '';
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') showOptions = false;
+	function setValue(value: string) {
+		onchange?.(value);
 	}
 
-	function handleSelect(option: SelectOption) {
+	function handleStaticSelect(option: SelectOption) {
 		if (option.value === undefined) return;
 		onchange?.(option.value);
-		showOptions = false;
 	}
 </script>
-
-<svelte:document onclick={handleDocumentClick} />
-<svelte:window onkeydown={showOptions ? handleKeydown : undefined} />
 
 <div class="su-select {className}" data-compact={compact || undefined}>
 	{#if staticDisplay}
 		<div class="form-label">{label}</div>
-	{:else}
-		<button
-			type="button"
-			bind:this={triggerRef}
-			class="trigger"
-			aria-haspopup="listbox"
-			aria-expanded={showOptions}
-			onclick={() => (showOptions = !showOptions)}
-		>
-			<span class="value">{displayLabel}</span>
-			<svg
-				class="chevron"
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="1.5"
-				stroke="currentColor"
-				aria-hidden="true"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
-				/>
-			</svg>
-		</button>
-	{/if}
 
-	{#if staticDisplay}
 		<ul class="list static" role="listbox">
 			{#each options as opt, i (i)}
 				{#if opt.divider}
@@ -117,7 +90,7 @@
 							type="button"
 							role="option"
 							aria-selected={selected === opt.value}
-							onclick={() => handleSelect(opt)}
+							onclick={() => handleStaticSelect(opt)}
 						>
 							<span class="indicator" aria-hidden="true"><span class="dot"></span></span>
 							<span class="option-text">
@@ -131,47 +104,102 @@
 				{/if}
 			{/each}
 		</ul>
-	{:else if showOptions}
-		<ul
-			bind:this={dropdownRef}
-			use:portal
-			use:dropdownPosition={{ trigger: triggerRef, align, position }}
-			class="list dropdown"
-			role="listbox"
-			in:fly={{ y: -5, duration: 150 }}
-			out:fly={{ y: -5, duration: 150 }}
-		>
-			{#each options as opt, i (i)}
-				{#if opt.divider}
-					<li class="divider" role="presentation"><span></span></li>
-				{:else if opt.isGroupHeader}
-					<li class="group-header" role="presentation">{opt.label}</li>
-				{:else}
-					<li
-						role="presentation"
-						class:with-border={!!opt.description && i < options.length - 1}
-						class:nowrap={!opt.description}
-					>
-						<button
-							type="button"
-							role="option"
-							aria-selected={selected === opt.value}
-							onclick={() => handleSelect(opt)}
+	{:else}
+		<Select.Root type="single" {items} bind:value={getValue, setValue}>
+			<Select.Trigger>
+				{#snippet child({ props })}
+					<button {...props} type="button" class="trigger">
+						<span class="value">{displayLabel}</span>
+						<svg
+							class="chevron"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							aria-hidden="true"
 						>
-							<span class="option-text">
-								<span class="option-label">{opt.label}</span>
-								{#if opt.description}
-									<span class="option-description">{opt.description}</span>
-								{/if}
-							</span>
-							<span class="indicator-wrap" aria-hidden="true">
-								<span class="indicator"><span class="dot"></span></span>
-							</span>
-						</button>
-					</li>
-				{/if}
-			{/each}
-		</ul>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
+							/>
+						</svg>
+					</button>
+				{/snippet}
+			</Select.Trigger>
+
+			<Select.Portal>
+				<Select.Content
+					forceMount
+					side={position}
+					align={align === 'right' ? 'end' : 'start'}
+					sideOffset={8}
+				>
+					{#snippet child({ wrapperProps, props: contentProps, open })}
+						{#if open}
+							<div {...wrapperProps}>
+								<ul
+									{...contentProps}
+									class="list dropdown"
+									data-compact={compact || undefined}
+									transition:fly={{ y: -5, duration: 150 }}
+								>
+									{#each options as opt, i (i)}
+										{#if opt.divider}
+											<li class="divider" role="presentation"><span></span></li>
+										{:else if opt.isGroupHeader}
+											<li class="group-header" role="presentation">{opt.label}</li>
+										{:else if opt.value === undefined}
+											<!-- Valueless option: rendered but inert, like the original. -->
+											<li
+												role="presentation"
+												class:with-border={!!opt.description && i < options.length - 1}
+												class:nowrap={!opt.description}
+											>
+												<button type="button" role="option" aria-selected={selected === opt.value}>
+													<span class="option-text">
+														<span class="option-label">{opt.label}</span>
+														{#if opt.description}
+															<span class="option-description">{opt.description}</span>
+														{/if}
+													</span>
+													<span class="indicator-wrap" aria-hidden="true">
+														<span class="indicator"><span class="dot"></span></span>
+													</span>
+												</button>
+											</li>
+										{:else}
+											<li
+												role="presentation"
+												class:with-border={!!opt.description && i < options.length - 1}
+												class:nowrap={!opt.description}
+											>
+												<Select.Item value={opt.value} label={opt.label}>
+													{#snippet child({ props })}
+														<button {...props} type="button">
+															<span class="option-text">
+																<span class="option-label">{opt.label}</span>
+																{#if opt.description}
+																	<span class="option-description">{opt.description}</span>
+																{/if}
+															</span>
+															<span class="indicator-wrap" aria-hidden="true">
+																<span class="indicator"><span class="dot"></span></span>
+															</span>
+														</button>
+													{/snippet}
+												</Select.Item>
+											</li>
+										{/if}
+									{/each}
+								</ul>
+							</div>
+						{/if}
+					{/snippet}
+				</Select.Content>
+			</Select.Portal>
+		</Select.Root>
 	{/if}
 </div>
 
@@ -248,8 +276,10 @@
 		margin-top: var(--su-space-1, 0.25rem);
 	}
 
+	/* Positioning is handled by the bits-ui floating wrapper; it adopts this
+	   element's z-index. The dropdown is portalled, so compact styling keys
+	   off data-compact on the list itself rather than the .su-select root. */
 	.list.dropdown {
-		position: fixed;
 		max-height: 450px;
 		overflow-y: auto;
 		padding: var(--su-space-1, 0.25rem);
@@ -302,7 +332,8 @@
 		outline: none;
 	}
 
-	.list [role='option'][aria-selected='true'] {
+	.list [role='option'][aria-selected='true'],
+	.list [role='option'][data-selected] {
 		color: var(--su-text, #1f2328);
 	}
 
@@ -326,11 +357,13 @@
 		border-radius: var(--su-radius-sm, 4px);
 	}
 
-	.list.dropdown [role='option']:hover {
+	/* bits-ui highlights on hover and keyboard navigation alike. */
+	.list.dropdown [role='option']:hover,
+	.list.dropdown [role='option'][data-highlighted] {
 		background-color: var(--su-surface-strong, #f1f3f5);
 	}
 
-	.su-select[data-compact] .list.dropdown [role='option'] {
+	.list.dropdown[data-compact] [role='option'] {
 		gap: var(--su-space-5, 1.25rem);
 		padding: var(--su-space-1, 0.25rem) var(--su-space-2, 0.5rem);
 	}
@@ -375,11 +408,13 @@
 		background-color: var(--su-surface-inverse, #16191d);
 	}
 
-	[role='option'][aria-selected='true'] .indicator {
+	[role='option'][aria-selected='true'] .indicator,
+	[role='option'][data-selected] .indicator {
 		border-color: var(--su-border-emphasis, #868e96);
 	}
 
-	[role='option'][aria-selected='true'] .dot {
+	[role='option'][aria-selected='true'] .dot,
+	[role='option'][data-selected] .dot {
 		display: block;
 	}
 

@@ -1,9 +1,17 @@
 <script lang="ts">
+	/**
+	 * Edge sheet — a bits-ui Dialog styled as a side panel. The panel stays
+	 * mounted and slides via a CSS transform transition; bits-ui contributes
+	 * dialog semantics, Escape handling and — when `backdrop` is set — the
+	 * focus trap, scroll lock and press-outside-to-close. Without a backdrop
+	 * the sheet is non-modal (page stays interactive). The closed panel is
+	 * `inert`, so it cannot be tabbed into while off-screen.
+	 */
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
+	import { Dialog } from 'bits-ui';
+	import { fade } from 'svelte/transition';
 	import X from '../icons/X.svelte';
-	import { portal } from '../actions/portal.js';
-	import Backdrop from './Backdrop.svelte';
 
 	type Side = 'top' | 'bottom' | 'left' | 'right';
 	type Align = 'start' | 'center' | 'end' | 'stretch';
@@ -38,21 +46,23 @@
 		footer
 	}: Props = $props();
 
-	// The panel is portalled to <body> on mount (actions are client-only), so a
-	// server-rendered "open" sheet would paint inline — trapped inside ancestor
-	// stacking contexts and briefly overlapped by page chrome. Keep it visually
-	// closed until mounted; deep-linked sheets slide in right after hydration.
+	// bits-ui's Portal mounts client-side only, so a server-rendered "open"
+	// sheet cannot paint early; the mounted guard is kept so a deep-linked open
+	// sheet still starts closed and slides in right after hydration.
 	let mounted = $state(false);
 	onMount(() => {
 		mounted = true;
 	});
 	let isOpen = $derived(mounted && open);
 
-	/** Handle keydown for escape key */
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape' && open) {
-			onclose?.();
-		}
+	// The `open` prop is not bindable (matching the original): bits-ui close
+	// requests (Escape, press outside with backdrop) only call `onclose`, and
+	// the parent flips `open`.
+	function getOpen() {
+		return isOpen;
+	}
+	function setOpen(value: boolean) {
+		if (!value && open) onclose?.();
 	}
 
 	let isVertical = $derived(side === 'top' || side === 'bottom');
@@ -112,42 +122,85 @@
 	let heightStyle = $derived(isVertical ? height || size : (height ?? null));
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<Dialog.Root bind:open={getOpen, setOpen}>
+	<Dialog.Portal>
+		{#if backdrop}
+			<Dialog.Overlay forceMount>
+				{#snippet child({ props: overlayProps, open: overlayOpen })}
+					{#if overlayOpen}
+						<div {...overlayProps} class="su-backdrop" transition:fade={{ duration: 200 }}></div>
+					{/if}
+				{/snippet}
+			</Dialog.Overlay>
+		{/if}
 
-{#if backdrop}
-	<Backdrop open={isOpen} onclick={() => onclose?.()} />
-{/if}
+		<!-- Sheet panel — kept mounted (forceMount) so the closed state stays in
+		     the DOM, translated off-screen, exactly as the original. -->
+		<Dialog.Content
+			forceMount
+			trapFocus={backdrop}
+			preventScroll={backdrop}
+			interactOutsideBehavior={backdrop ? 'close' : 'ignore'}
+		>
+			{#snippet child({ props })}
+				<div
+					{...props}
+					aria-modal={backdrop ? 'true' : undefined}
+					inert={!isOpen}
+					class="su-sheet"
+					data-side={side}
+					data-align={align}
+					style:width={widthStyle}
+					style:height={heightStyle}
+					style:border-radius={borderRadius}
+					style:transform={isOpen ? openTransform : closedTransform}
+				>
+					<header>
+						<Dialog.Title>
+							{#snippet child({ props: titleProps })}
+								<h2 {...titleProps}>{title}</h2>
+							{/snippet}
+						</Dialog.Title>
+						<Dialog.Close>
+							{#snippet child({ props: closeProps })}
+								<button
+									{...closeProps}
+									type="button"
+									class="close"
+									onclick={() => onclose?.()}
+									aria-label="Close panel"
+								>
+									<X size={20} />
+								</button>
+							{/snippet}
+						</Dialog.Close>
+					</header>
 
-<!-- Sheet panel — portalled so it stacks above all page chrome. -->
-<div
-	use:portal
-	class="su-sheet"
-	data-side={side}
-	data-align={align}
-	style:width={widthStyle}
-	style:height={heightStyle}
-	style:border-radius={borderRadius}
-	style:transform={isOpen ? openTransform : closedTransform}
->
-	<header>
-		<h2>{title}</h2>
-		<button type="button" class="close" onclick={() => onclose?.()} aria-label="Close panel">
-			<X size={20} />
-		</button>
-	</header>
+					<div class="body">
+						{@render children?.()}
+					</div>
 
-	<div class="body">
-		{@render children?.()}
-	</div>
-
-	{#if footer}
-		<footer>
-			{@render footer()}
-		</footer>
-	{/if}
-</div>
+					{#if footer}
+						<footer>
+							{@render footer()}
+						</footer>
+					{/if}
+				</div>
+			{/snippet}
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
 
 <style>
+	/* Backdrop dim, as ui/Backdrop.svelte's default `modal` variant. */
+	.su-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: calc(var(--su-z-modal, 1100) - 1);
+		background: var(--su-overlay, rgb(0 0 0 / 0.4));
+		backdrop-filter: blur(4px);
+	}
+
 	.su-sheet {
 		position: fixed;
 		z-index: var(--su-z-modal, 1100);

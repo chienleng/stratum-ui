@@ -1,4 +1,9 @@
 <script lang="ts">
+	/**
+	 * Non-interactive section heading. Intentionally a presentational div —
+	 * bits-ui's GroupHeading requires a Group wrapper, which the flat
+	 * options-menu section structure does not use.
+	 */
 	import type { Component, Snippet } from 'svelte';
 
 	interface Props {

@@ -3,11 +3,14 @@
 	 * Dual-thumb range slider with a formatted value readout, optional ghost
 	 * range and a read-only scrubber mode driven by `playheadPosition`.
 	 *
-	 * Rebuilt on pointer events to replace the bits-ui Slider: drag either thumb
-	 * (or press anywhere on the track to grab the nearest one), arrow keys step
-	 * a focused thumb, Home/End jump to the extremes. `onchange` fires on
+	 * Pointer/keyboard handling comes from the bits-ui Slider: drag either
+	 * thumb (or press the track to grab the nearest one), arrow keys step a
+	 * focused thumb, Home/End jump to the extremes. `onchange` fires on
 	 * commit — pointer release or a keyboard step — not on every drag frame.
+	 * Dragging a thumb past the other swaps them (bits-ui autoSort) rather
+	 * than clamping at the other thumb's value.
 	 */
+	import { Slider } from 'bits-ui';
 
 	interface Props {
 		min?: number;
@@ -34,107 +37,13 @@
 		playheadPosition = null
 	}: Props = $props();
 
-	// Local state for immediate UI feedback — follows `value`, overridden by the
-	// drag/keyboard handlers until the next prop change.
+	// Local state for immediate UI feedback — follows `value`, overridden by
+	// the bits-ui Slider while dragging until the next prop change.
 	let localValue = $derived<[number, number]>([...value]);
-
-	let trackEl = $state<HTMLElement | undefined>();
-	let thumbEls = $state<Array<HTMLElement | undefined>>([undefined, undefined]);
-	let dragIndex = $state<number | null>(null);
-
-	function clamp(v: number, lo: number, hi: number): number {
-		return Math.min(hi, Math.max(lo, v));
-	}
-
-	function decimalsOf(n: number): number {
-		const text = String(n);
-		const dot = text.indexOf('.');
-		return dot === -1 ? 0 : text.length - dot - 1;
-	}
 
 	/** Position as a percentage of the track width */
 	function pct(v: number): number {
 		return max > min ? ((v - min) / (max - min)) * 100 : 0;
-	}
-
-	/** Value under the pointer, snapped to `step` and clamped to [min, max] */
-	function valueAtPointer(clientX: number): number {
-		if (!trackEl || max <= min) return min;
-		const rect = trackEl.getBoundingClientRect();
-		const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
-		const raw = min + ratio * (max - min);
-		const snapped = min + Math.round((raw - min) / step) * step;
-		const precision = Math.min(10, Math.max(decimalsOf(step), decimalsOf(min)));
-		return clamp(Number(snapped.toFixed(precision)), min, max);
-	}
-
-	/** Nearest thumb to a value; when coincident, direction decides */
-	function nearestThumb(v: number): number {
-		const [lo, hi] = localValue;
-		if (Math.abs(v - lo) < Math.abs(v - hi)) return 0;
-		if (Math.abs(v - lo) > Math.abs(v - hi)) return 1;
-		return v < lo ? 0 : 1;
-	}
-
-	/** Move one thumb, clamped so the thumbs never cross */
-	function setThumb(index: number, v: number) {
-		const next: [number, number] = [...localValue];
-		next[index] = index === 0 ? clamp(v, min, localValue[1]) : clamp(v, localValue[0], max);
-		localValue = next;
-	}
-
-	function commit() {
-		onchange?.([...localValue]);
-	}
-
-	function handlePointerDown(event: PointerEvent) {
-		if (event.button !== 0) return;
-		const v = valueAtPointer(event.clientX);
-		const index = nearestThumb(v);
-		dragIndex = index;
-		setThumb(index, v);
-		if (event.currentTarget instanceof HTMLElement) {
-			event.currentTarget.setPointerCapture(event.pointerId);
-		}
-		thumbEls[index]?.focus();
-		event.preventDefault();
-	}
-
-	function handlePointerMove(event: PointerEvent) {
-		if (dragIndex === null) return;
-		setThumb(dragIndex, valueAtPointer(event.clientX));
-	}
-
-	function handlePointerUp() {
-		if (dragIndex === null) return;
-		dragIndex = null;
-		commit();
-	}
-
-	function handleThumbKeydown(index: number, event: KeyboardEvent) {
-		const current = localValue[index];
-		let next: number;
-		switch (event.key) {
-			case 'ArrowLeft':
-			case 'ArrowDown':
-				next = current - step;
-				break;
-			case 'ArrowRight':
-			case 'ArrowUp':
-				next = current + step;
-				break;
-			case 'Home':
-				next = min;
-				break;
-			case 'End':
-				next = max;
-				break;
-			default:
-				return;
-		}
-		event.preventDefault();
-		setThumb(index, next);
-		commit();
 	}
 
 	/**
@@ -150,9 +59,6 @@
 
 	let displayMin = $derived(parseFormattedValue(formatValue(localValue[0] ?? min)));
 	let displayMax = $derived(parseFormattedValue(formatValue(localValue[1] ?? max)));
-
-	let lowPct = $derived(pct(localValue[0]));
-	let highPct = $derived(pct(localValue[1]));
 
 	// Ghost range positioning (percentage-based)
 	let ghostLeft = $derived(ghostRange ? pct(ghostRange[0]) : 0);
@@ -196,50 +102,55 @@
 		</div>
 	{:else}
 		<!-- Range slider mode -->
-		<div
-			class="slider interactive"
-			role="group"
-			aria-label="Range"
-			onpointerdown={handlePointerDown}
-			onpointermove={handlePointerMove}
-			onpointerup={handlePointerUp}
-			onpointercancel={handlePointerUp}
+		<Slider.Root
+			type="multiple"
+			{min}
+			{max}
+			{step}
+			thumbPositioning="exact"
+			bind:value={() => localValue, (newValue) => (localValue = [newValue[0], newValue[1]])}
+			onValueCommit={(committed) => onchange?.([committed[0], committed[1]])}
 		>
-			<span class="track" bind:this={trackEl}>
-				{#if ghostRange}
-					<!-- Ghost range bar -->
-					<span class="ghost-range" style="left: {ghostLeft}%; width: {ghostWidth}%"></span>
-				{/if}
+			{#snippet child({ props })}
+				<div {...props} class="slider interactive" role="group" aria-label="Range">
+					<span class="track">
+						{#if ghostRange}
+							<!-- Ghost range bar -->
+							<span class="ghost-range" style="left: {ghostLeft}%; width: {ghostWidth}%"></span>
+						{/if}
 
-				<!-- Range (filled area between thumbs) -->
-				<span class="range" style="left: {lowPct}%; width: {highPct - lowPct}%"></span>
-			</span>
+						<!-- Range (filled area between thumbs) -->
+						<Slider.Range>
+							{#snippet child({ props: rangeProps })}
+								<span {...rangeProps} class="range"></span>
+							{/snippet}
+						</Slider.Range>
+					</span>
 
-			{#if ghostRange}
-				<!-- Ghost markers at ghost range endpoints -->
-				<span class="ghost-marker" style="left: {ghostLeft}%"></span>
-				<span class="ghost-marker" style="left: {ghostLeft + ghostWidth}%"></span>
-			{/if}
+					{#if ghostRange}
+						<!-- Ghost markers at ghost range endpoints -->
+						<span class="ghost-marker" style="left: {ghostLeft}%"></span>
+						<span class="ghost-marker" style="left: {ghostLeft + ghostWidth}%"></span>
+					{/if}
 
-			<!-- Thumbs -->
-			{#each localValue as thumbValue, index (index)}
-				<span
-					bind:this={thumbEls[index]}
-					class="thumb"
-					class:grabbing={dragIndex === index}
-					role="slider"
-					tabindex="0"
-					aria-valuemin={index === 0 ? min : localValue[0]}
-					aria-valuemax={index === 0 ? localValue[1] : max}
-					aria-valuenow={thumbValue}
-					aria-valuetext={formatValue(thumbValue)}
-					aria-orientation="horizontal"
-					aria-label={index === 0 ? 'Minimum value' : 'Maximum value'}
-					style="left: {pct(thumbValue)}%"
-					onkeydown={(event) => handleThumbKeydown(index, event)}
-				></span>
-			{/each}
-		</div>
+					<!-- Thumbs -->
+					{#each localValue as thumbValue, index (index)}
+						<Slider.Thumb {index}>
+							{#snippet child({ props: thumbProps })}
+								<span
+									{...thumbProps}
+									class="thumb"
+									aria-valuemin={index === 0 ? min : localValue[0]}
+									aria-valuemax={index === 0 ? localValue[1] : max}
+									aria-valuetext={formatValue(thumbValue)}
+									aria-label={index === 0 ? 'Minimum value' : 'Maximum value'}
+								></span>
+							{/snippet}
+						</Slider.Thumb>
+					{/each}
+				</div>
+			{/snippet}
+		</Slider.Root>
 	{/if}
 </div>
 
@@ -338,7 +249,7 @@
 		transition: border-color var(--su-duration-fast, 150ms) var(--su-ease, ease);
 	}
 
-	.thumb.grabbing {
+	.thumb[data-active] {
 		cursor: grabbing;
 	}
 

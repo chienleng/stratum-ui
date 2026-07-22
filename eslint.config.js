@@ -46,7 +46,7 @@ export default defineConfig(
 		}
 	},
 	{
-		// The chart system is ported 1:1 from openelectricity's JSDoc source,
+		// The chart system is ported 1:1 from OE's JSDoc source,
 		// which is deliberately dynamic where it meets d3/LayerCake (accessors,
 		// scales, rows). Faithful `any`s are kept there rather than refactored.
 		files: ['src/lib/charts/**'],

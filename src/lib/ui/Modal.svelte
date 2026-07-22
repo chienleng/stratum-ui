@@ -1,4 +1,12 @@
 <script lang="ts">
+	/**
+	 * Modal panel. Deliberately uses no bits-ui primitives: this is a purely
+	 * presentational panel (no open state, no close callback) that consumers
+	 * compose inside <Overlay>, which already provides the Dialog root, focus
+	 * trap, Escape handling and scroll lock. Spinning up a second Dialog.Root
+	 * here would nest two dialogs (competing focus traps, doubled aria-modal)
+	 * when composed.
+	 */
 	import { fade } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
 

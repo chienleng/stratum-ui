@@ -1,5 +1,12 @@
 <script lang="ts">
+	/**
+	 * Menu item rendered as a DropdownMenu.Item, gaining menu keyboard
+	 * navigation and highlighting. `closeOnSelect` is disabled: handlers close
+	 * the menu explicitly via the `sections` snippet's `close`. Must be
+	 * rendered inside OptionsMenu.
+	 */
 	import type { Component, Snippet } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
 
 	interface Props {
 		icon?: Component<{ class?: string; size?: number | string }>;
@@ -34,15 +41,19 @@
 	{/if}
 {/snippet}
 
-{#if href}
-	<a {href} target="_blank" rel="noopener noreferrer" class="su-options-menu-item">
-		{@render inner()}
-	</a>
-{:else}
-	<button type="button" {onclick} class="su-options-menu-item">
-		{@render inner()}
-	</button>
-{/if}
+<DropdownMenu.Item closeOnSelect={false} onSelect={onclick}>
+	{#snippet child({ props })}
+		{#if href}
+			<a {...props} {href} target="_blank" rel="noopener noreferrer" class="su-options-menu-item">
+				{@render inner()}
+			</a>
+		{:else}
+			<button {...props} type="button" class="su-options-menu-item">
+				{@render inner()}
+			</button>
+		{/if}
+	{/snippet}
+</DropdownMenu.Item>
 
 <style>
 	.su-options-menu-item {
@@ -64,7 +75,9 @@
 		transition: background-color var(--su-duration-fast, 150ms) var(--su-ease, ease);
 	}
 
-	.su-options-menu-item:hover {
+	/* bits-ui highlights on hover and keyboard navigation alike. */
+	.su-options-menu-item:hover,
+	.su-options-menu-item[data-highlighted] {
 		background: var(--su-surface-muted, #f8f9fa);
 		text-decoration: none;
 	}

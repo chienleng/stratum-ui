@@ -1,0 +1,9 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "stratum-ui",
+	"account_id": "7797b02330b6bcb062ee6cf99d6b48e8",
+	"compatibility_date": "2026-07-22",
+	"assets": {
+		"directory": "./build"
+	}
+}

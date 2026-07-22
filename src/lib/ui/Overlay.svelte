@@ -1,8 +1,14 @@
 <script lang="ts">
+	/**
+	 * Full-screen dialog overlay built on bits-ui Dialog. The dimmed backdrop
+	 * and the centring container are Dialog parts portalled to <body>; the
+	 * focus trap, Escape-to-close, body scroll locking and press-outside-to-
+	 * close come from bits-ui. Presence is owned by the consumer: close
+	 * interactions only call `onclose`; the overlay stays until unmounted.
+	 */
+	import { Dialog } from 'bits-ui';
 	import { fade } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
-	import { portal } from '../actions/portal.js';
-	import Backdrop from './Backdrop.svelte';
 
 	interface Props {
 		children?: Snippet;
@@ -10,23 +16,60 @@
 	}
 
 	let { children, onclose }: Props = $props();
+
+	// The dialog reads as open for as long as the component is mounted; a close
+	// request from bits-ui (Escape, backdrop press) is only reported upward.
+	function getOpen() {
+		return true;
+	}
+	function setOpen(value: boolean) {
+		if (!value) onclose?.();
+	}
 </script>
 
-<Backdrop open onclick={() => onclose?.()} duration={25} />
+<Dialog.Root bind:open={getOpen, setOpen}>
+	<Dialog.Portal>
+		<Dialog.Overlay forceMount>
+			{#snippet child({ props, open })}
+				{#if open}
+					<div {...props} class="su-backdrop" transition:fade={{ duration: 25 }}></div>
+				{/if}
+			{/snippet}
+		</Dialog.Overlay>
 
-<div
-	use:portal
-	class="su-overlay"
-	role="dialog"
-	aria-modal="true"
-	transition:fade={{ duration: 25 }}
->
-	<div class="centre">
-		{@render children?.()}
-	</div>
-</div>
+		<Dialog.Content forceMount>
+			{#snippet child({ props, open })}
+				{#if open}
+					<div {...props} class="su-overlay" transition:fade={{ duration: 25 }}>
+						<!-- Pressing the empty centring area (not the panel) closes, standing
+						     in for the original's backdrop click. Escape provides the
+						     keyboard equivalent via bits-ui. -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="centre"
+							onpointerdown={(e) => {
+								if (e.target === e.currentTarget) onclose?.();
+							}}
+						>
+							{@render children?.()}
+						</div>
+					</div>
+				{/if}
+			{/snippet}
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
 
 <style>
+	/* Backdrop dim, as ui/Backdrop.svelte's default `modal` variant. */
+	.su-backdrop {
+		position: fixed;
+		inset: 0;
+		z-index: calc(var(--su-z-modal, 1100) - 1);
+		background: var(--su-overlay, rgb(0 0 0 / 0.4));
+		backdrop-filter: blur(4px);
+	}
+
 	.su-overlay {
 		position: fixed;
 		inset: 0;

@@ -1,12 +1,16 @@
 <script lang="ts">
+	/**
+	 * Options dropdown menu built on bits-ui DropdownMenu — open/close,
+	 * outside-click, Escape, focus management and keyboard navigation are
+	 * delegated to it.
+	 */
 	import { fly } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
 	import EllipsisVertical from '../../icons/EllipsisVertical.svelte';
 	import Maximize2 from '../../icons/Maximize2.svelte';
 	import CircleHelp from '../../icons/CircleHelp.svelte';
 	import Minimize2 from '../../icons/Minimize2.svelte';
-	import { portal } from '../../actions/portal.js';
-	import { dropdownPosition } from '../../actions/dropdown-position.js';
 	import OptionsMenuItem from './OptionsMenuItem.svelte';
 
 	interface Props {
@@ -32,80 +36,73 @@
 
 	let isOpen = $state(false);
 
-	let triggerRef = $state<HTMLElement | undefined>();
-	let dropdownRef = $state<HTMLElement | undefined>();
-
 	function close() {
 		isOpen = false;
 	}
-
-	function handleDocumentClick(e: MouseEvent) {
-		const target = e.target;
-		if (!(target instanceof Node)) return;
-		if (triggerRef?.contains(target) || dropdownRef?.contains(target)) return;
-		close();
-	}
 </script>
 
-<svelte:document onclick={handleDocumentClick} />
-
 <div class="su-options-menu">
-	<button
-		bind:this={triggerRef}
-		type="button"
-		onclick={() => (isOpen = !isOpen)}
-		class="trigger {triggerClass}"
-		title="Options"
-		aria-haspopup="menu"
-		aria-expanded={isOpen}
-	>
-		<EllipsisVertical class="trigger-icon {iconClass}" />
-	</button>
+	<DropdownMenu.Root bind:open={isOpen}>
+		<DropdownMenu.Trigger>
+			{#snippet child({ props })}
+				<button {...props} type="button" class="trigger {triggerClass}" title="Options">
+					<EllipsisVertical class="trigger-icon {iconClass}" />
+				</button>
+			{/snippet}
+		</DropdownMenu.Trigger>
 
-	{#if isOpen}
 		<!-- Above the toast band: the menu portals to <body>, exists only while
 		     open and has no backdrop, so it must always beat the app's overlay
 		     band — sheets, toasts and tooltips (e.g. the unit detail sheet,
 		     which hosts one of these menus). -->
-		<div
-			bind:this={dropdownRef}
-			use:portal
-			use:dropdownPosition={{ trigger: triggerRef, align: 'right', position: 'bottom' }}
-			class="dropdown"
-			in:fly={{ y: -5, duration: 150 }}
-			role="menu"
-		>
-			{#if sections}
-				{@render sections({ close })}
-			{/if}
+		<DropdownMenu.Portal>
+			<DropdownMenu.Content
+				forceMount
+				preventScroll={false}
+				side="bottom"
+				align="end"
+				sideOffset={8}
+			>
+				{#snippet child({ wrapperProps, props: contentProps, open })}
+					{#if open}
+						<div {...wrapperProps}>
+							<div {...contentProps} class="dropdown" in:fly={{ y: -5, duration: 150 }}>
+								{#if sections}
+									{@render sections({ close })}
+								{/if}
 
-			{#if onfullscreenchange}
-				<OptionsMenuItem
-					icon={isFullscreen ? Minimize2 : Maximize2}
-					kbd="F"
-					onclick={() => {
-						onfullscreenchange?.();
-						close();
-					}}
-				>
-					{isFullscreen ? 'Exit full screen' : 'Enter full screen'}
-				</OptionsMenuItem>
-			{/if}
+								{#if onfullscreenchange}
+									<OptionsMenuItem
+										icon={isFullscreen ? Minimize2 : Maximize2}
+										kbd="F"
+										onclick={() => {
+											onfullscreenchange?.();
+											close();
+										}}
+									>
+										{isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+									</OptionsMenuItem>
+								{/if}
 
-			{#if onshowshortcuts}
-				<OptionsMenuItem
-					icon={CircleHelp}
-					kbd="?"
-					onclick={() => {
-						onshowshortcuts?.();
-						close();
-					}}
-				>
-					Keyboard shortcuts
-				</OptionsMenuItem>
-			{/if}
-		</div>
-	{/if}
+								{#if onshowshortcuts}
+									<OptionsMenuItem
+										icon={CircleHelp}
+										kbd="?"
+										onclick={() => {
+											onshowshortcuts?.();
+											close();
+										}}
+									>
+										Keyboard shortcuts
+									</OptionsMenuItem>
+								{/if}
+							</div>
+						</div>
+					{/if}
+				{/snippet}
+			</DropdownMenu.Content>
+		</DropdownMenu.Portal>
+	</DropdownMenu.Root>
 </div>
 
 <style>
@@ -140,8 +137,9 @@
 		color: var(--su-text-muted, #6a6a6a);
 	}
 
+	/* Positioning is handled by the bits-ui floating wrapper; it adopts this
+	   element's z-index. */
 	.dropdown {
-		position: fixed;
 		z-index: calc(var(--su-z-toast, 1300) + 1);
 		min-width: 200px;
 		padding: var(--su-space-1, 0.25rem) 0;

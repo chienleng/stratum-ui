@@ -1,8 +1,12 @@
 <script lang="ts">
 	/**
-	 * Segmented switcher with a thumb that slides to the selected option.
-	 * The thumb is inset from the track via the container padding.
+	 * Segmented switcher with a thumb that slides to the selected option,
+	 * built on bits-ui ToggleGroup (single). The thumb measurement/animation
+	 * is hand-rolled (no primitive for it); roving focus and arrow keys come
+	 * from bits-ui. Selection styling keys off data-state, and deselecting
+	 * the active segment is guarded so a selection always remains.
 	 */
+	import { ToggleGroup } from 'bits-ui';
 	import type { Component } from 'svelte';
 
 	export interface SwitchIconButton {
@@ -36,7 +40,7 @@
 		class: className = ''
 	}: Props = $props();
 
-	let isSelected = $derived((value: string | number) => selected === value);
+	let groupValue = $derived(String(buttons.find((b) => b.value === selected)?.value ?? ''));
 
 	let containerEl = $state<HTMLElement | undefined>();
 	let buttonEls = $state<Record<string, HTMLElement | undefined>>({});
@@ -77,41 +81,52 @@
 	});
 </script>
 
-<div
-	bind:this={containerEl}
-	class="su-switch-icons {className}"
-	class:compact
-	data-radius={radius}
-	data-track={track}
-	data-dark={darkSelected || undefined}
+<ToggleGroup.Root
+	type="single"
+	bind:value={
+		() => groupValue,
+		(newValue) => {
+			if (newValue) onchange?.(newValue);
+		}
+	}
 >
-	{#if thumbVisible}
+	{#snippet child({ props })}
 		<div
-			class="thumb"
-			style:left="{thumbLeft}px"
-			style:top="{thumbTop}px"
-			style:width="{thumbWidth}px"
-			style:height="{thumbHeight}px"
-		></div>
-	{/if}
-
-	{#each buttons as { label, value, icon: IconComponent } (value)}
-		<button
-			type="button"
-			bind:this={buttonEls[String(value)]}
-			{value}
-			aria-pressed={isSelected(value)}
-			onclick={() => onchange?.(String(value))}
+			{...props}
+			bind:this={containerEl}
+			class="su-switch-icons {className}"
+			class:compact
+			data-radius={radius}
+			data-track={track}
+			data-dark={darkSelected || undefined}
 		>
-			{#if IconComponent}
-				<IconComponent />
+			{#if thumbVisible}
+				<div
+					class="thumb"
+					style:left="{thumbLeft}px"
+					style:top="{thumbTop}px"
+					style:width="{thumbWidth}px"
+					style:height="{thumbHeight}px"
+				></div>
 			{/if}
-			{#if label}
-				{label}
-			{/if}
-		</button>
-	{/each}
-</div>
+
+			{#each buttons as { label, value, icon: IconComponent } (value)}
+				<ToggleGroup.Item value={String(value)}>
+					{#snippet child({ props: itemProps })}
+						<button {...itemProps} bind:this={buttonEls[String(value)]} {value}>
+							{#if IconComponent}
+								<IconComponent />
+							{/if}
+							{#if label}
+								{label}
+							{/if}
+						</button>
+					{/snippet}
+				</ToggleGroup.Item>
+			{/each}
+		</div>
+	{/snippet}
+</ToggleGroup.Root>
 
 <style>
 	.su-switch-icons {
@@ -187,11 +202,11 @@
 		box-shadow: 0 0 0 var(--su-focus-ring-width, 3px) var(--su-focus-ring, rgb(24 24 27 / 0.35));
 	}
 
-	button[aria-pressed='true'] {
+	button[data-state='on'] {
 		color: var(--su-text, #1f2328);
 	}
 
-	.su-switch-icons[data-dark] button[aria-pressed='true'] {
+	.su-switch-icons[data-dark] button[data-state='on'] {
 		color: var(--su-text-inverse, #ffffff);
 	}
 

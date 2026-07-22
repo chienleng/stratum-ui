@@ -5,7 +5,7 @@
 	 * Range preset switcher, optional custom-date-range calendar popover and
 	 * interval selector for a chart toolbar.
 	 *
-	 * Ported from openelectricity's ChartRangeBar: the bits-ui Select/Popover
+	 * Ported from OE's ChartRangeBar: the bits-ui Select/Popover
 	 * primitives are replaced with in-house dropdowns (clickoutside/portal
 	 * actions), the app-specific range-interval-config becomes the generic
 	 * `presets`/`intervals` props, and the DateRangePicker is replaced by the

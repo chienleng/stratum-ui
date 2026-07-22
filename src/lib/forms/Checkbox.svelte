@@ -1,10 +1,12 @@
 <script lang="ts">
 	/**
-	 * Checkbox — consolidation of OpenElectricity's Checkbox, Checkbox2 and
-	 * CheckboxNew. CheckboxNew's custom-box look is canonical; Checkbox2's
-	 * bindable `indeterminate` is kept (and, unlike the source, actually
-	 * rendered — as a dash — since the native input is visually hidden).
+	 * Checkbox with bindable `checked` and `indeterminate` (rendered as a
+	 * dash). Built on bits-ui Checkbox: a visually-hidden Checkbox.Root button
+	 * provides keyboard/ARIA behaviour, and `name` renders a hidden input for
+	 * form submission.
 	 */
+	import { Checkbox } from 'bits-ui';
+
 	interface Props {
 		name?: string;
 		label?: string;
@@ -22,22 +24,20 @@
 		onchange,
 		class: className = ''
 	}: Props = $props();
-
-	function handleChange(event: Event) {
-		const target = event.target as HTMLInputElement;
-		onchange?.(target.checked);
-	}
 </script>
 
 <label class="su-checkbox {className}">
-	<input
-		type="checkbox"
-		id={name || undefined}
-		name={name || undefined}
+	<Checkbox.Root
 		bind:checked
 		bind:indeterminate
-		onchange={handleChange}
-	/>
+		id={name || undefined}
+		name={name || undefined}
+		onCheckedChange={(value) => onchange?.(value)}
+	>
+		{#snippet child({ props })}
+			<button {...props}></button>
+		{/snippet}
+	</Checkbox.Root>
 
 	<span class="box" aria-hidden="true">
 		<svg class="check" viewBox="0 0 20 20" fill="currentColor">
@@ -67,9 +67,9 @@
 		font-family: var(--su-font-sans, system-ui, sans-serif);
 	}
 
-	/* Visually hidden but focusable, so keyboard support and native
-	   :checked / :indeterminate / :focus-visible state drive the custom box. */
-	.su-checkbox input {
+	/* Visually hidden but focusable, so keyboard support and the bits-ui
+	   data-state / :focus-visible state drive the custom box. */
+	.su-checkbox button {
 		position: absolute;
 		width: 1px;
 		height: 1px;
@@ -105,26 +105,23 @@
 		height: 14px;
 	}
 
-	input:checked + .box,
-	input:indeterminate + .box {
+	.su-checkbox button[data-state='checked'] ~ .box,
+	.su-checkbox button[data-state='indeterminate'] ~ .box {
 		border-color: var(--su-text, #1f2328);
 		background-color: var(--su-surface-strong, #f1f3f5);
 	}
 
-	input:checked + .box .check {
+	.su-checkbox button[data-state='checked'] ~ .box .check {
 		display: block;
 	}
 
-	/* Indeterminate wins over checked, matching native checkbox rendering. */
-	input:indeterminate + .box .check {
-		display: none;
-	}
-
-	input:indeterminate + .box .dash {
+	/* data-state is 'indeterminate' whenever indeterminate is set, so it wins
+	   over checked, matching native checkbox rendering. */
+	.su-checkbox button[data-state='indeterminate'] ~ .box .dash {
 		display: block;
 	}
 
-	input:focus-visible + .box {
+	.su-checkbox button:focus-visible ~ .box {
 		box-shadow: 0 0 0 var(--su-focus-ring-width, 3px) var(--su-focus-ring, rgb(24 24 27 / 0.35));
 	}
 

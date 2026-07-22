@@ -3,7 +3,7 @@
  * in JS, so the palette is available both as CSS custom properties and as
  * plain hex values. A unit test asserts the two stay in sync.
  *
- * Keys are OpenElectricity API fuel-tech ids (snake_case).
+ * Keys are OE API fuel-tech ids (snake_case).
  */
 export const fuelTechColours = {
 	battery_charging: '#577cff',

@@ -1,7 +1,19 @@
+<script lang="ts">
+	/**
+	 * Section divider rendered as a DropdownMenu.Separator so it carries the
+	 * proper separator role. Must be rendered inside OptionsMenu.
+	 */
+	import { DropdownMenu } from 'bits-ui';
+</script>
+
 <!-- :last-child hides a dangling divider — section blocks append a trailing
      divider assuming another section follows; when nothing does, the rule
      hides itself. -->
-<div class="su-options-menu-divider"></div>
+<DropdownMenu.Separator>
+	{#snippet child({ props })}
+		<div {...props} class="su-options-menu-divider"></div>
+	{/snippet}
+</DropdownMenu.Separator>
 
 <style>
 	.su-options-menu-divider {

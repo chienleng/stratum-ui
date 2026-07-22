@@ -56,18 +56,23 @@
 	</Sheet>
 </Demo>
 
-<Demo title="Bottom sheet" description="Draggable snap points; drag down to dismiss on touch.">
-	<Button variant="outline" onclick={() => (showBottomSheet = true)}>Open bottom sheet</Button>
-	<BottomSheet
-		open={showBottomSheet}
-		containerHeight={600}
-		onclose={() => (showBottomSheet = false)}
-	>
-		<div class="sheet-body">
-			<h2>Mobile filter tray</h2>
-			<p>Drag the grip to cycle snap points, or fling down to dismiss.</p>
-		</div>
-	</BottomSheet>
+<Demo
+	title="Bottom sheet"
+	description="Draggable snap points; drag down to dismiss on touch. Anchors to the bottom of a relatively-positioned container."
+>
+	<div class="sheet-frame">
+		<Button variant="outline" onclick={() => (showBottomSheet = true)}>Open bottom sheet</Button>
+		<BottomSheet
+			open={showBottomSheet}
+			containerHeight={420}
+			onclose={() => (showBottomSheet = false)}
+		>
+			<div class="sheet-body">
+				<h2>Mobile filter tray</h2>
+				<p>Drag the grip to cycle snap points, or fling down to dismiss.</p>
+			</div>
+		</BottomSheet>
+	</div>
 </Demo>
 
 <Demo
@@ -111,6 +116,18 @@
 	h2 {
 		font-size: var(--su-font-size-lg, 1.25rem);
 		margin-bottom: var(--su-space-2, 0.5rem);
+	}
+
+	/* BottomSheet anchors to its nearest positioned ancestor; without one it
+	   lands at the top of the document, off-viewport once the page scrolls. */
+	.sheet-frame {
+		position: relative;
+		height: 420px;
+		overflow: hidden;
+		padding: var(--su-space-4, 1rem);
+		border: 1px solid var(--su-border, #e9ecef);
+		border-radius: var(--su-radius-lg, 10px);
+		background: var(--su-surface-strong, #f6f8fa);
 	}
 
 	.modal-body,

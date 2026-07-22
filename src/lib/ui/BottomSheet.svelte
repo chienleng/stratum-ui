@@ -1,19 +1,25 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import type { Snippet } from 'svelte';
+	import { Dialog } from 'bits-ui';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
 	/**
-	 * Mobile bottom sheet — a drag-resizable panel anchored to the bottom of its
-	 * (relatively-positioned) container. There is deliberately no backdrop: the
-	 * map / list behind stays visible and interactive. Drag the grip to snap
-	 * between a peek and a full height, or drag down past the dismiss threshold to
-	 * close (persistent sheets pass `dismissable={false}` to snap back down
-	 * instead). Passing `minHeight` adds a third, minimised snap below the peek —
-	 * a fixed pixel height sized to the caller's collapsed chrome. The body
-	 * scrolls within the current height, so content is reachable even at the
-	 * peek snap.
+	 * Mobile bottom sheet — a drag-resizable panel anchored to the bottom of
+	 * its (relatively-positioned) container. Built on bits-ui Dialog,
+	 * unportalled so the panel stays anchored inside that container; the
+	 * drag/snap gestures are hand-rolled around Dialog.Content and bits-ui
+	 * contributes the dialog role and open-state plumbing only. Deliberately
+	 * non-modal: no backdrop, no focus trap or steal, no scroll lock, no
+	 * Escape/outside-press
+	 * close — the map / list behind stays visible and interactive. Drag the grip
+	 * to snap between a peek and a full height, or drag down past the dismiss
+	 * threshold to close (persistent sheets pass `dismissable={false}` to snap
+	 * back down instead). Passing `minHeight` adds a third, minimised snap below
+	 * the peek — a fixed pixel height sized to the caller's collapsed chrome.
+	 * The body scrolls within the current height, so content is reachable even
+	 * at the peek snap.
 	 *
 	 * Heights are fractions of `containerHeight` (the bounding relative parent),
 	 * so the sheet sizes correctly regardless of viewport.
@@ -70,6 +76,16 @@
 		children,
 		footer
 	}: Props = $props();
+
+	// The `open` prop is not bindable (matching the original); closing is
+	// reported via `onclose` and the parent flips `open`. With Escape and
+	// outside-press ignored, bits-ui never initiates a close itself.
+	function getOpen() {
+		return open;
+	}
+	function setOpen(value: boolean) {
+		if (!value && open) onclose?.();
+	}
 
 	let peekPx = $derived(Math.round(containerHeight * peekFraction));
 	let fullPx = $derived(Math.round(containerHeight * fullFraction));
@@ -143,41 +159,59 @@
 	}
 </script>
 
-{#if open}
-	<div
-		class="su-bottom-sheet {className}"
-		data-dragging={isDragging || undefined}
-		style:height="{height}px"
-		transition:fly={{ y: containerHeight || 600, duration: 280, easing: quintOut }}
+<Dialog.Root bind:open={getOpen, setOpen}>
+	<!-- No Dialog.Portal: the sheet must stay absolutely positioned within its
+	     relatively-positioned container, exactly as the original. -->
+	<Dialog.Content
+		forceMount
+		trapFocus={false}
+		preventScroll={false}
+		interactOutsideBehavior="ignore"
+		escapeKeydownBehavior="ignore"
+		onOpenAutoFocus={(e) => e.preventDefault()}
+		onCloseAutoFocus={(e) => e.preventDefault()}
 	>
-		<!-- Drag surface: the grip strip and the whole header act as one handle,
-		     so the sheet is easy to grab on touch. Presses on interactive header
-		     controls are left alone (see onGripDown), and only the visual grip
-		     carries the separator semantics so header content reads normally to
-		     assistive tech. -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="drag-surface" onpointerdown={onGripDown}>
-			<div
-				class="grip-strip"
-				style={gripStyle}
-				role="separator"
-				aria-orientation="horizontal"
-				aria-label="Resize panel"
-				tabindex="-1"
-			>
-				<div class="grip-pill {gripClass}"></div>
-			</div>
+		{#snippet child({ props, open: isOpen })}
+			{#if isOpen}
+				<div
+					{...props}
+					aria-modal={undefined}
+					class="su-bottom-sheet {className}"
+					data-dragging={isDragging || undefined}
+					style:height="{height}px"
+					transition:fly={{ y: containerHeight || 600, duration: 280, easing: quintOut }}
+				>
+					<!-- Drag surface: the grip strip and the whole header act as one handle,
+					     so the sheet is easy to grab on touch. Presses on interactive header
+					     controls are left alone (see onGripDown), and only the visual grip
+					     carries the separator semantics so header content reads normally to
+					     assistive tech. -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div class="drag-surface" onpointerdown={onGripDown}>
+						<div
+							class="grip-strip"
+							style={gripStyle}
+							role="separator"
+							aria-orientation="horizontal"
+							aria-label="Resize panel"
+							tabindex="-1"
+						>
+							<div class="grip-pill {gripClass}"></div>
+						</div>
 
-			{@render header?.()}
-		</div>
+						{@render header?.()}
+					</div>
 
-		<div bind:this={bodyEl} class="body">
-			{@render children?.()}
-		</div>
+					<div bind:this={bodyEl} class="body">
+						{@render children?.()}
+					</div>
 
-		{@render footer?.()}
-	</div>
-{/if}
+					{@render footer?.()}
+				</div>
+			{/if}
+		{/snippet}
+	</Dialog.Content>
+</Dialog.Root>
 
 <style>
 	.su-bottom-sheet {
