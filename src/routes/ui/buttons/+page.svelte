@@ -104,9 +104,10 @@
 	description="Inline arrow-left link for the top of detail pages. Text defaults to 'Back'."
 	code={backLinkCode}
 >
+	<!-- Demo links point back at this page so they navigate nowhere visible. -->
 	<div class="back-links">
-		<BackLink href="#back">Back to devices</BackLink>
-		<BackLink href="#back" />
+		<BackLink href="/ui/buttons">Back to devices</BackLink>
+		<BackLink href="/ui/buttons" />
 	</div>
 </Demo>
 

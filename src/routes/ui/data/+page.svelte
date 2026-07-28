@@ -106,7 +106,7 @@
 		title="A84041B2C1D9E001"
 		titleFont="mono"
 		subtitle="Gateway device · Bayswater"
-		backHref="#back"
+		backHref="/ui/data"
 		backLabel="Back to devices"
 	>
 		{#snippet icon()}<Move />{/snippet}
@@ -151,7 +151,7 @@
 	code={statCode}
 >
 	<StatGrid columns={4}>
-		<StatTile label="Devices" value={128} tone="accent" href="#stat">
+		<StatTile label="Devices" value={128} tone="accent" href="/ui/data">
 			{#snippet icon()}<Move />{/snippet}
 			{#snippet footer()}View all →{/snippet}
 		</StatTile>

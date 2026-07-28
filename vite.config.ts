@@ -11,6 +11,14 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 			adapter: adapter(),
+			prerender: {
+				handleHttpError: ({ path, referrer, message }) => {
+					// The Avatar demo links a deliberately missing image to exercise the
+					// onerror → initials fallback. Every other 404 stays a build failure.
+					if (path === '/missing-avatar.png') return;
+					throw new Error(`${message} (linked from ${referrer})`);
+				}
+			},
 			alias: {
 				'@chienleng/stratum-ui': 'src/lib/index.ts',
 				'@chienleng/stratum-ui/charts/elements': 'src/lib/charts/elements/index.ts',
