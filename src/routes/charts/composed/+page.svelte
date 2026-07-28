@@ -119,10 +119,10 @@
 </script>
 
 <svelte:head>
-	<title>Composed dashboard · stratum-ui</title>
+	<title>Dashboard · stratum-ui</title>
 </svelte:head>
 
-<h1>Composed dashboard</h1>
+<h1>Dashboard</h1>
 
 <p class="intro">
 	The whole chart system on one dataset. The main chart, line chart and sparklines all read

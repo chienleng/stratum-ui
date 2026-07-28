@@ -5,7 +5,7 @@
 		{
 			title: 'Charts',
 			links: [
-				{ href: '/charts/composed', label: 'Composed dashboard' },
+				{ href: '/charts/composed', label: 'Dashboard' },
 				{ href: '/charts/stratum', label: 'Stratum chart' },
 				{ href: '/charts/stacked-area', label: 'Stacked area' },
 				{ href: '/charts/bar', label: 'Bar' },

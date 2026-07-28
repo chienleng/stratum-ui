@@ -18,7 +18,7 @@
 <p class="intro">
 	The full composition wrapper over a <strong>ChartStore</strong>: header with options menu and unit
 	switching, tooltip, pan/zoom interaction layer, and a drag-to-resize handle. Every piece it
-	composes is available individually — see the Composed dashboard for the whole system working
+	composes is available individually — see the Dashboard for the whole system working
 	together. Cmd/Ctrl-scroll to zoom, drag to pan, click to lock focus.
 </p>
 
