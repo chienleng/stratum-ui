@@ -33,6 +33,7 @@ Import a theme once in your root layout, then use components:
 | `@chienleng/stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Toggle`, `RangeSelector`                                                                                                           |
 | `@chienleng/stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                   |
 | `@chienleng/stratum-ui/utils`           | SI-unit conversion, number/date formatting, data transforms                                                                                                                                                    |
+| `@chienleng/stratum-ui/map`             | `PointMap` (MapLibre GL bubble map), `MapLegend`, `collapseMapAttribution`, `DEFAULT_MAP_STYLES` — requires the optional peers `svelte-maplibre-gl` + `maplibre-gl`                                            |
 | `@chienleng/stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                    |
 | `@chienleng/stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                       |
 
@@ -113,6 +114,41 @@ pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono
 The showcase site (`pnpm dev`) demonstrates every component, including
 tooltip modes, pan/zoom, brushing and the live token sheet at
 `/theme/tokens` (with copy-theme-CSS buttons).
+
+## Maps
+
+The `./map` entry point is the only one with peer dependencies beyond Svelte —
+install them alongside the package:
+
+```sh
+pnpm add -D svelte-maplibre-gl maplibre-gl
+```
+
+```svelte
+<script lang="ts">
+	import { PointMap, type MapPoint } from '@chienleng/stratum-ui/map';
+
+	const points: MapPoint[] = [
+		{ id: 'syd', lng: 151.2, lat: -33.87, label: 'Sydney', colour: '#4e79a7', radius: 8, raw: {} }
+	];
+</script>
+
+<PointMap {points} mapTheme="light" onclick={(point) => console.log(point)} />
+```
+
+Notes:
+
+- Base styles come from `DEFAULT_MAP_STYLES` (CARTO positron/dark-matter CDN
+  styles plus an Esri World Imagery raster style for `satellite`). Override any
+  of them per app via the `mapStyles` prop — e.g. self-hosted style JSON and
+  glyphs: `mapStyles={{ light: '/map-styles/positron.json' }}`.
+- `svelte-maplibre-gl` injects `maplibre-gl.css` from CDN at runtime by
+  default. Pass `autoloadGlobalCss={false}` and
+  `import 'maplibre-gl/dist/maplibre-gl.css'` yourself to avoid the fetch.
+- Point colours are MapLibre paint values, so they must be resolved colours
+  (hex/rgb), not `var()` references — use `fuelTechColours` or your own hexes.
+- Extra `svelte-maplibre-gl` layers/controls compose in via the `children`
+  snippet, and the map instance is exposed as a bindable `map` prop.
 
 ## Development
 

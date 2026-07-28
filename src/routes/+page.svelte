@@ -32,6 +32,10 @@
 		<h2>Forms</h2>
 		<p>Checkboxes, radios, selects, text inputs and toggles.</p>
 	</a>
+	<a href="/map">
+		<h2>Map</h2>
+		<p>MapLibre GL point map with colour/size legends and themable base styles.</p>
+	</a>
 	<a href="/theme/tokens">
 		<h2>Theme</h2>
 		<p>The full token sheet — switch themes live, copy a theme file for your own project.</p>

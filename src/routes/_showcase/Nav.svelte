@@ -27,6 +27,10 @@
 			links: [{ href: '/forms', label: 'Form elements' }]
 		},
 		{
+			title: 'Map',
+			links: [{ href: '/map', label: 'Point map' }]
+		},
+		{
 			title: 'Theme',
 			links: [{ href: '/theme/tokens', label: 'Tokens' }]
 		}
