@@ -53,11 +53,52 @@ export function resolveToken(name: string, el?: Element): string {
  * token sheet). Kept in sync with the theme files by a unit test.
  */
 export const tokenGroups = {
-	surface: ['--su-surface', '--su-surface-muted', '--su-surface-strong', '--su-surface-inverse'],
-	text: ['--su-text', '--su-text-muted', '--su-text-subtle', '--su-text-inverse'],
+	surface: [
+		'--su-surface',
+		'--su-surface-muted',
+		'--su-surface-strong',
+		'--su-surface-emphasis',
+		'--su-surface-inverse'
+	],
+	text: [
+		'--su-text',
+		'--su-text-secondary',
+		'--su-text-muted',
+		'--su-text-subtle',
+		'--su-text-faint',
+		'--su-text-inverse'
+	],
 	accent: ['--su-accent', '--su-accent-hover', '--su-accent-contrast'],
-	border: ['--su-border', '--su-border-strong', '--su-border-emphasis'],
-	status: ['--su-danger', '--su-success', '--su-warning'],
+	dataAccent: [
+		'--su-data-accent-50',
+		'--su-data-accent-100',
+		'--su-data-accent-300',
+		'--su-data-accent-500',
+		'--su-data-accent-600',
+		'--su-data-accent-900'
+	],
+	border: ['--su-border', '--su-border-muted', '--su-border-strong', '--su-border-emphasis'],
+	status: [
+		'--su-danger',
+		'--su-success',
+		'--su-warning',
+		'--su-danger-50',
+		'--su-danger-200',
+		'--su-danger-500',
+		'--su-danger-600',
+		'--su-danger-800',
+		'--su-warning-50',
+		'--su-warning-100',
+		'--su-warning-200',
+		'--su-warning-500',
+		'--su-warning-600',
+		'--su-warning-700',
+		'--su-warning-800',
+		'--su-success-50',
+		'--su-success-100',
+		'--su-success-500',
+		'--su-success-600'
+	],
 	overlay: ['--su-overlay', '--su-tooltip-bg', '--su-tooltip-text', '--su-focus-ring'],
 	fontFamily: ['--su-font-sans', '--su-font-display', '--su-font-mono'],
 	fontSize: [

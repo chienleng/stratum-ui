@@ -118,11 +118,14 @@
 	--su-surface: #ffffff;
 	--su-surface-muted: var(--su-fw-slate-50);
 	--su-surface-strong: var(--su-fw-slate-100);
+	--su-surface-emphasis: var(--su-fw-slate-200);
 	--su-surface-inverse: var(--su-fw-slate-900);
 
 	--su-text: var(--su-fw-slate-900);
+	--su-text-secondary: var(--su-fw-slate-600);
 	--su-text-muted: var(--su-fw-slate-500);
 	--su-text-subtle: var(--su-fw-slate-400);
+	--su-text-faint: var(--su-fw-slate-300);
 	--su-text-inverse: #ffffff;
 
 	--su-accent: var(--su-fw-slate-900);
@@ -130,12 +133,44 @@
 	--su-accent-contrast: #ffffff;
 
 	--su-border: var(--su-fw-slate-200);
+	--su-border-muted: var(--su-fw-slate-100);
 	--su-border-strong: var(--su-fw-slate-300);
 	--su-border-emphasis: var(--su-fw-slate-500);
 
 	--su-danger: #dc2626;
 	--su-success: #16a34a;
 	--su-warning: #d97706;
+
+	/* Status ramps (Tailwind red/amber/emerald steps): backgrounds at the
+	   light end, borders in the low hundreds, text/icons at 500+. The
+	   unnumbered tokens above remain the component-API defaults. */
+	--su-danger-50: #fef2f2;
+	--su-danger-200: #fecaca;
+	--su-danger-500: #ef4444;
+	--su-danger-600: #dc2626;
+	--su-danger-800: #991b1b;
+
+	--su-warning-50: #fffbeb;
+	--su-warning-100: #fef3c7;
+	--su-warning-200: #fde68a;
+	--su-warning-500: #f59e0b;
+	--su-warning-600: #d97706;
+	--su-warning-700: #b45309;
+	--su-warning-800: #92400e;
+
+	--su-success-50: #ecfdf5;
+	--su-success-100: #d1fae5;
+	--su-success-500: #10b981;
+	--su-success-600: #059669;
+
+	/* Data accent (blue — highlights, selections, focus in data UI).
+	   Distinct from --su-accent, which is the primary-action colour. */
+	--su-data-accent-50: #eff6ff;
+	--su-data-accent-100: #dbeafe;
+	--su-data-accent-300: #93c5fd;
+	--su-data-accent-500: #3b82f6;
+	--su-data-accent-600: #2563eb;
+	--su-data-accent-900: #1e3a8a;
 
 	--su-overlay: rgb(15 23 42 / 0.4);
 	--su-tooltip-bg: var(--su-fw-slate-900);

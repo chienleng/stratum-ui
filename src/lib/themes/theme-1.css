@@ -106,11 +106,14 @@
 	--su-surface: #ffffff;
 	--su-surface-muted: var(--su-oe-light-warm-grey);
 	--su-surface-strong: var(--su-oe-warm-grey);
+	--su-surface-emphasis: #e8e6e1;
 	--su-surface-inverse: var(--su-oe-dark-grey);
 
 	--su-text: var(--su-oe-dark-grey);
+	--su-text-secondary: #4f4f4f;
 	--su-text-muted: var(--su-oe-mid-grey);
 	--su-text-subtle: var(--su-oe-mid-warm-grey);
+	--su-text-faint: #d9d8d5;
 	--su-text-inverse: #ffffff;
 
 	--su-accent: var(--su-oe-red);
@@ -118,12 +121,44 @@
 	--su-accent-contrast: #ffffff;
 
 	--su-border: var(--su-oe-warm-grey);
+	--su-border-muted: var(--su-oe-light-warm-grey);
 	--su-border-strong: var(--su-oe-mid-warm-grey);
 	--su-border-emphasis: var(--su-oe-mid-grey);
 
 	--su-danger: #fa6060;
 	--su-success: #70d26e;
 	--su-warning: #eb1f70;
+
+	/* Status ramps around the OE status colours: backgrounds at the light
+	   end, borders in the low hundreds, text/icons at 500+. The unnumbered
+	   tokens above remain the component-API defaults. */
+	--su-danger-50: #fef1f1;
+	--su-danger-200: #fdc9c9;
+	--su-danger-500: #fa6060;
+	--su-danger-600: #e04b4b;
+	--su-danger-800: #a32e2e;
+
+	--su-warning-50: #fdeff5;
+	--su-warning-100: #fbdcea;
+	--su-warning-200: #f7b3d0;
+	--su-warning-500: #eb1f70;
+	--su-warning-600: #c9145e;
+	--su-warning-700: #a5104d;
+	--su-warning-800: #820c3d;
+
+	--su-success-50: #f1fbf1;
+	--su-success-100: #dcf5db;
+	--su-success-500: #70d26e;
+	--su-success-600: #57b855;
+
+	/* Data accent (blue — highlights, selections, focus in data UI).
+	   Distinct from --su-accent, which is the primary-action colour. */
+	--su-data-accent-50: #eff3ff;
+	--su-data-accent-100: #dde7ff;
+	--su-data-accent-300: #a3bcff;
+	--su-data-accent-500: #577cff;
+	--su-data-accent-600: #3d61e8;
+	--su-data-accent-900: #1e2f7a;
 
 	--su-overlay: rgb(0 0 0 / 0.4);
 	--su-tooltip-bg: var(--su-oe-dark-grey);

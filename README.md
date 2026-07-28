@@ -59,6 +59,16 @@ Each file declares tokens under `:where(:root), [data-theme='<name>']`:
   always wins.
 - **Copy-paste:** each file is self-contained (custom-property declarations
   only, no resets) — paste one into any project and edit values freely.
+- **Brand overrides:** consuming apps can re-theme by declaring a
+  higher-specificity override sheet (e.g. `:root[data-brand='x'] { --su-accent: … }`)
+  that redefines only the diverging tokens — no fork or extra theme file needed.
+
+Since 0.8.0 the semantic set also covers app-chrome needs beyond the component
+API: extra neutral steps (`--su-surface-emphasis`, `--su-text-secondary`,
+`--su-text-faint`, `--su-border-muted`), numbered status ramps
+(`--su-danger-*`, `--su-warning-*`, `--su-success-*` — the unnumbered tokens
+remain the component defaults) and a data-accent ramp (`--su-data-accent-*`,
+distinct from `--su-accent`, the primary-action colour).
 
 Unthemed usage degrades gracefully: every component carries Neutral-value
 fallbacks in its `var()` references.
