@@ -5,6 +5,7 @@ export { default as MultiSelect, type MultiSelectOption } from './MultiSelect.sv
 export { default as Radio } from './Radio.svelte';
 export { default as RadioBigButton } from './RadioBigButton.svelte';
 export { default as RangeSelector, type RangeOption } from './RangeSelector.svelte';
-export { default as Select, type SelectOption } from './Select.svelte';
+export { default as SearchInput } from './SearchInput.svelte';
+export { default as Select, type SelectOption, type SelectVariant } from './Select.svelte';
 export { default as TextInput } from './TextInput.svelte';
 export { default as Toggle } from './Toggle.svelte';

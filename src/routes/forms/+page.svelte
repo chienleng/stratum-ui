@@ -6,6 +6,7 @@
 		Radio,
 		RadioBigButton,
 		RangeSelector,
+		SearchInput,
 		Select,
 		TextInput,
 		Toggle,
@@ -13,6 +14,7 @@
 		type MultiSelectOption,
 		type SelectOption
 	} from '@chienleng/stratum-ui/forms';
+	import { Button } from '@chienleng/stratum-ui/ui';
 	import Demo from '../_showcase/Demo.svelte';
 
 	// Settings panel composition
@@ -77,6 +79,20 @@
 	}
 
 	let range = $state<number | null>(2);
+
+	// Search input
+	let searchValue = $state('');
+	let lastSearch = $state('');
+
+	// Field select in a form
+	let fieldRegion = $state('');
+	let submittedEntries = $state('');
+
+	function handleFormSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		const data = new FormData(event.currentTarget as HTMLFormElement);
+		submittedEntries = [...data.entries()].map(([key, value]) => `${key}=${value}`).join('&');
+	}
 </script>
 
 <svelte:head>
@@ -200,7 +216,55 @@
 	</div>
 </Demo>
 
+<Demo
+	title="Search input"
+	description="Debounced onsearch with a clear button; value is bindable for immediate reads."
+	code={'<SearchInput bind:value onsearch={(v) => refetch(v)} />'}
+>
+	<div class="stack">
+		<SearchInput bind:value={searchValue} onsearch={(value) => (lastSearch = value)} />
+		<span class="hint">Last search fired: “{lastSearch}”</span>
+	</div>
+</Demo>
+
+<Demo
+	title="Field select in a form"
+	description="variant='field' renders an input-like trigger and leaves label case alone; name renders a hidden input so the value submits with the form."
+	code={'<Select variant="field" name="region" selected={region} options={...} />'}
+>
+	<form class="stack" onsubmit={handleFormSubmit}>
+		<Select
+			variant="field"
+			name="region"
+			label="Choose a region"
+			selected={fieldRegion}
+			options={regionOptions}
+			onchange={(value) => (fieldRegion = value)}
+		/>
+		<div>
+			<Button type="submit" size="sm">Submit</Button>
+		</div>
+		{#if submittedEntries}
+			<span class="hint">Form posted: <code>{submittedEntries}</code></span>
+		{/if}
+	</form>
+</Demo>
+
 <style>
+	.stack {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--su-space-3, 0.75rem);
+		width: 100%;
+		max-width: 360px;
+	}
+
+	.hint {
+		color: var(--su-text-muted, #59636e);
+		font-size: var(--su-font-size-xs, 0.75rem);
+	}
+
 	h1 {
 		font-size: var(--su-font-size-3xl, 2.25rem);
 		margin-bottom: var(--su-space-6, 1.5rem);

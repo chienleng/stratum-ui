@@ -1,12 +1,13 @@
 <script lang="ts" module>
 	export type ButtonVariant =
-		'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link' | 'contrast';
+		'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'warning' | 'link' | 'contrast';
 	export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes, HTMLAnchorAttributes } from 'svelte/elements';
+	import Spinner from './Spinner.svelte';
 
 	type Props = {
 		variant?: ButtonVariant;
@@ -14,6 +15,8 @@
 		/** Renders an <a> instead of a <button> */
 		href?: string;
 		disabled?: boolean;
+		/** Shows a spinner and disables the button while a pending action runs. */
+		loading?: boolean;
 		type?: 'button' | 'submit' | 'reset';
 		ref?: HTMLButtonElement | HTMLAnchorElement | null;
 		class?: string;
@@ -25,6 +28,7 @@
 		size = 'md',
 		href = undefined,
 		disabled = false,
+		loading = false,
 		type = 'button',
 		ref = $bindable(null),
 		class: className = '',
@@ -53,9 +57,13 @@
 		data-variant={variant}
 		data-size={size}
 		{type}
-		{disabled}
+		disabled={disabled || loading}
+		aria-busy={loading || undefined}
 		{...rest}
 	>
+		{#if loading}
+			<Spinner size="sm" />
+		{/if}
 		{@render children?.()}
 	</button>
 {/if}
@@ -75,7 +83,7 @@
 		--_pad-x: var(--su-space-3, 0.75rem);
 		--_font-size: var(--su-font-size-md, 1rem);
 		--_font-family: var(--su-font-sans, system-ui, sans-serif);
-		--_radius: var(--su-radius-md, 6px);
+		--_radius: var(--su-button-radius, var(--su-radius-md, 6px));
 		--_shadow: var(--su-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05));
 
 		box-sizing: border-box;
@@ -153,6 +161,12 @@
 		--_fg: #ffffff;
 	}
 
+	.su-button[data-variant='warning'] {
+		--_bg: var(--su-warning, #d97706);
+		--_bg-hover: color-mix(in srgb, var(--su-warning, #d97706) 85%, black);
+		--_fg: #ffffff;
+	}
+
 	.su-button[data-variant='link'] {
 		--_bg: transparent;
 		--_bg-hover: transparent;
@@ -172,7 +186,7 @@
 		--_border: var(--su-text, #1f2328);
 		--_border-hover: var(--su-surface-inverse, #16191d);
 		--_font-family: var(--su-font-display, var(--su-font-sans, system-ui, sans-serif));
-		--_radius: var(--su-radius-lg, 10px);
+		--_radius: var(--su-button-radius, var(--su-radius-lg, 10px));
 		--_shadow: none;
 	}
 
@@ -181,7 +195,7 @@
 		--_pad-y: var(--su-space-1, 0.25rem);
 		--_pad-x: var(--su-space-2, 0.5rem);
 		--_font-size: var(--su-font-size-sm, 0.875rem);
-		--_radius: var(--su-radius-sm, 4px);
+		--_radius: var(--su-button-radius, var(--su-radius-sm, 4px));
 		gap: var(--su-space-1, 0.25rem);
 	}
 

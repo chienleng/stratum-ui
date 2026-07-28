@@ -8,6 +8,13 @@
 		/** Renders a non-selectable group heading. */
 		isGroupHeader?: boolean;
 	}
+
+	/**
+	 * `inline` is the borderless compact-dropdown trigger; `field` renders a
+	 * bordered, full-width, input-like trigger for use in forms, and leaves
+	 * label case untouched (inline capitalises).
+	 */
+	export type SelectVariant = 'inline' | 'field';
 </script>
 
 <script lang="ts">
@@ -25,6 +32,9 @@
 		options?: SelectOption[];
 		/** Placeholder/label shown when nothing is selected (static mode: list heading). */
 		label?: string;
+		/** Renders a hidden input so the selection submits with a form. */
+		name?: string;
+		variant?: SelectVariant;
 		staticDisplay?: boolean;
 		position?: 'top' | 'bottom';
 		align?: 'left' | 'right';
@@ -37,6 +47,8 @@
 		selected = undefined,
 		options = [],
 		label = '',
+		name = '',
+		variant = 'inline',
 		staticDisplay = false,
 		position = 'bottom',
 		align = 'left',
@@ -74,7 +86,11 @@
 	}
 </script>
 
-<div class="su-select {className}" data-compact={compact || undefined}>
+<div class="su-select {className}" data-compact={compact || undefined} data-variant={variant}>
+	{#if name}
+		<input type="hidden" {name} value={selected ?? ''} />
+	{/if}
+
 	{#if staticDisplay}
 		<div class="form-label">{label}</div>
 
@@ -143,6 +159,7 @@
 									{...contentProps}
 									class="list dropdown"
 									data-compact={compact || undefined}
+									data-variant={variant}
 									transition:fly={{ y: -5, duration: 150 }}
 								>
 									{#each options as opt, i (i)}
@@ -236,6 +253,35 @@
 
 	.su-select[data-compact] .trigger {
 		font-size: var(--su-font-size-xs, 0.75rem);
+	}
+
+	/* ── field variant: bordered, full-width, input-like (mirrors TextInput) */
+	.su-select[data-variant='field'] .trigger {
+		justify-content: space-between;
+		width: 100%;
+		padding: var(--su-space-2, 0.5rem) var(--su-space-3, 0.75rem);
+		border: 1px solid var(--su-border-strong, #ced4da);
+		border-radius: var(--su-radius-sm, 4px);
+		background-color: var(--su-surface, #ffffff);
+		font-size: var(--su-font-size-sm, 0.875rem);
+		transition:
+			border-color var(--su-duration-fast, 150ms) var(--su-ease, ease),
+			box-shadow var(--su-duration-fast, 150ms) var(--su-ease, ease);
+	}
+
+	.su-select[data-variant='field'] .trigger:hover {
+		background-color: var(--su-surface, #ffffff);
+	}
+
+	.su-select[data-variant='field'] .trigger:focus {
+		border-color: var(--su-accent, #18181b);
+		box-shadow: 0 0 0 var(--su-focus-ring-width, 3px) var(--su-focus-ring, rgb(24 24 27 / 0.35));
+	}
+
+	/* Field labels can carry user data (names, emails, ids) — leave case alone. */
+	.su-select[data-variant='field'] .value {
+		font-weight: var(--su-font-weight-normal, 400);
+		text-transform: none;
 	}
 
 	.value {
@@ -372,6 +418,11 @@
 		text-transform: capitalize;
 	}
 
+	/* The dropdown is portalled, so the field override keys off the list. */
+	.list[data-variant='field'] .option-label {
+		text-transform: none;
+	}
+
 	.option-description {
 		display: block;
 		max-width: 200px;
@@ -424,7 +475,8 @@
 			font-size: var(--su-font-size-md, 1rem);
 		}
 
-		.su-select[data-compact] .trigger {
+		.su-select[data-compact] .trigger,
+		.su-select[data-variant='field'] .trigger {
 			font-size: var(--su-font-size-sm, 0.875rem);
 		}
 	}

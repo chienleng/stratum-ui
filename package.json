@@ -84,7 +84,7 @@
 	"peerDependencies": {
 		"maplibre-gl": "^4.0.0 || ^5.0.0",
 		"svelte": "^5.0.0",
-		"svelte-maplibre-gl": "^1.0.3"
+		"svelte-maplibre-gl": "^1.0.3 || ^2.0.0"
 	},
 	"peerDependenciesMeta": {
 		"maplibre-gl": {

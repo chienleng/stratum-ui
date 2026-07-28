@@ -19,7 +19,9 @@
 				{ href: '/ui/buttons', label: 'Buttons' },
 				{ href: '/ui/cards', label: 'Cards' },
 				{ href: '/ui/overlays', label: 'Overlays' },
-				{ href: '/ui/controls', label: 'Controls' }
+				{ href: '/ui/controls', label: 'Controls' },
+				{ href: '/ui/feedback', label: 'Feedback' },
+				{ href: '/ui/data', label: 'Data' }
 			]
 		},
 		{

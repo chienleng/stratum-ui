@@ -22,6 +22,9 @@
 		triggerClass?: string;
 		/** Extra classes for the trigger icon. */
 		iconClass?: string;
+		/** Replaces the built-in kebab trigger entirely. Spread `props` onto
+		 *  the interactive element so bits-ui can drive it. */
+		trigger?: Snippet<[{ props: Record<string, unknown> }]>;
 		sections?: Snippet<[{ close: () => void }]>;
 	}
 
@@ -31,6 +34,7 @@
 		onshowshortcuts,
 		triggerClass = '',
 		iconClass = '',
+		trigger,
 		sections
 	}: Props = $props();
 
@@ -45,9 +49,13 @@
 	<DropdownMenu.Root bind:open={isOpen}>
 		<DropdownMenu.Trigger>
 			{#snippet child({ props })}
-				<button {...props} type="button" class="trigger {triggerClass}" title="Options">
-					<EllipsisVertical class="trigger-icon {iconClass}" />
-				</button>
+				{#if trigger}
+					{@render trigger({ props })}
+				{:else}
+					<button {...props} type="button" class="trigger {triggerClass}" title="Options">
+						<EllipsisVertical class="trigger-icon {iconClass}" />
+					</button>
+				{/if}
 			{/snippet}
 		</DropdownMenu.Trigger>
 

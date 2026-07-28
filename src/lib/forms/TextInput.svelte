@@ -57,7 +57,10 @@
 		font-weight: var(--su-font-weight-normal, 400);
 	}
 
-	.su-text-input:focus-visible {
+	/* :focus (not :focus-visible) so mouse focus also styles the field —
+	   otherwise a consuming app's base form styles (e.g. @tailwindcss/forms)
+	   show through on click. */
+	.su-text-input:focus {
 		border-color: var(--su-accent, #18181b);
 		box-shadow: 0 0 0 var(--su-focus-ring-width, 3px) var(--su-focus-ring, rgb(24 24 27 / 0.35));
 	}

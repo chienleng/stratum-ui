@@ -9,6 +9,7 @@
 		'outline',
 		'ghost',
 		'destructive',
+		'warning',
 		'link',
 		'contrast'
 	] as const;
@@ -16,8 +17,15 @@
 
 	const variantsCode =
 		'<Button variant="primary">Primary</Button>\n<Button variant="contrast">Contrast</Button>';
+	const radiusCode = '<Button style="--su-button-radius: var(--su-radius-full)">Pill</Button>';
 
 	let groupValue = $state('7d');
+	let saving = $state(false);
+
+	function fakeSave() {
+		saving = true;
+		setTimeout(() => (saving = false), 1500);
+	}
 </script>
 
 <svelte:head>
@@ -50,6 +58,30 @@
 		<Button disabled>Disabled</Button>
 		<Button variant="outline" disabled>Disabled outline</Button>
 		<Button href="/theme/tokens" variant="link">Anchor button</Button>
+	</div>
+</Demo>
+
+<Demo
+	title="Loading"
+	description="`loading` shows a spinner, disables the button and sets aria-busy."
+>
+	<div class="row">
+		<Button loading>Saving…</Button>
+		<Button variant="outline" loading={saving} onclick={fakeSave}>
+			{saving ? 'Saving…' : 'Trigger save'}
+		</Button>
+	</div>
+</Demo>
+
+<Demo
+	title="Radius knob"
+	description="--su-button-radius overrides the radius chain — e.g. pill-shaped primaries."
+	code={radiusCode}
+>
+	<div class="row">
+		<Button style="--su-button-radius: var(--su-radius-full)">Pill primary</Button>
+		<Button variant="outline" style="--su-button-radius: var(--su-radius-full)">Pill outline</Button
+		>
 	</div>
 </Demo>
 

@@ -27,9 +27,8 @@
 	<Button onclick={() => (showModal = true)}>Open modal</Button>
 	{#if showModal}
 		<Overlay onclose={() => (showModal = false)}>
-			<Modal maxWidth="480px">
+			<Modal maxWidth="480px" title="Export chart data" onclose={() => (showModal = false)}>
 				<div class="modal-body">
-					<h2>Export chart data</h2>
 					<p>Download the current view as CSV, including hidden series.</p>
 				</div>
 				{#snippet buttons()}
