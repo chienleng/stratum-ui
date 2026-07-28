@@ -16,9 +16,10 @@
 
 <h1>Stratum chart</h1>
 <p class="intro">
-	The full composition wrapper: header with options menu and unit switching, tooltip, pan/zoom
-	interaction layer, and a drag-to-resize handle. Cmd/Ctrl-scroll to zoom, drag to pan, click to
-	lock focus.
+	The full composition wrapper over a <strong>ChartStore</strong>: header with options menu and unit
+	switching, tooltip, pan/zoom interaction layer, and a drag-to-resize handle. Every piece it
+	composes is available individually — see the Composed dashboard for the whole system working
+	together. Cmd/Ctrl-scroll to zoom, drag to pan, click to lock focus.
 </p>
 
 <div class="mode-row">
@@ -54,17 +55,6 @@
 </Demo>
 
 <style>
-	h1 {
-		font-size: var(--su-font-size-3xl, 2.25rem);
-		margin-bottom: var(--su-space-3, 0.75rem);
-	}
-
-	.intro {
-		color: var(--su-text-muted, #59636e);
-		max-width: 44em;
-		margin-bottom: var(--su-space-6, 1.5rem);
-	}
-
 	.mode-row {
 		display: flex;
 		align-items: center;

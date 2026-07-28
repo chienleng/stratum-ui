@@ -2,6 +2,9 @@
 	import {
 		Checkbox,
 		CheckboxTree,
+		ChipGroup,
+		Field,
+		InlineEdit,
 		MultiSelect,
 		Radio,
 		RadioBigButton,
@@ -11,6 +14,7 @@
 		TextInput,
 		Toggle,
 		type CheckboxTreeNode,
+		type ChipOption,
 		type MultiSelectOption,
 		type SelectOption
 	} from '@chienleng/stratum-ui/forms';
@@ -49,6 +53,25 @@
 		{ label: 'Solar', value: 'solar', colour: 'var(--su-ft-solar, #fed500)' }
 	];
 	let selectedTechs = $state(['wind', 'solar']);
+
+	// Field / ChipGroup / InlineEdit demos
+	let fieldName = $state('');
+	const fieldNameError = $derived(fieldName.trim() ? undefined : 'A name is required');
+
+	const chipOptions: ChipOption[] = [
+		{ value: 'orgs', label: 'Orgs', color: '#2563eb' },
+		{ value: 'sites', label: 'Sites', color: '#059669' },
+		{ value: 'entities', label: 'Entities', color: '#d97706' },
+		{ value: 'devices', label: 'Devices' }
+	];
+	let selectedChips = $state(['orgs', 'sites']);
+
+	let inlineName = $state('Bore pump 2');
+	const fieldCode =
+		'<Field label="Name" required error={errors.name}>\n\t{#snippet children({ id, describedBy })}\n\t\t<TextInput {id} aria-describedby={describedBy} bind:value={name} />\n\t{/snippet}\n</Field>';
+	const chipCode =
+		'<ChipGroup options={types} selected={selectedTypes} minSelected={1} onchange={(v) => (selectedTypes = v)} />';
+	const inlineCode = '<InlineEdit value={name} onsave={async (v) => await rename(v)} />';
 
 	const treeNodes: CheckboxTreeNode[] = [
 		{
@@ -248,6 +271,56 @@
 			<span class="hint">Form posted: <code>{submittedEntries}</code></span>
 		{/if}
 	</form>
+</Demo>
+
+<Demo
+	title="Field wrapper"
+	description="Label, required marker, hint and error message around any bare control. The snippet receives generated ids so the control can wire itself up for assistive tech."
+	code={fieldCode}
+>
+	<div class="stack">
+		<Field label="Entity name" required error={fieldNameError} hint="Shown on the entity card.">
+			{#snippet children({ id, describedBy })}
+				<TextInput
+					{id}
+					aria-describedby={describedBy}
+					placeholder="e.g. Bore pump 2"
+					value={fieldName}
+					onchange={(value) => (fieldName = value)}
+				/>
+			{/snippet}
+		</Field>
+	</div>
+</Demo>
+
+<Demo
+	title="Chip group"
+	description="Pill multi-select toggles. minSelected blocks deselecting past a floor (here 1); per-option colours tint the selected state."
+	code={chipCode}
+>
+	<ChipGroup
+		options={chipOptions}
+		selected={selectedChips}
+		minSelected={1}
+		onchange={(values) => (selectedChips = values)}
+	/>
+</Demo>
+
+<Demo
+	title="Inline edit"
+	description="Click the text to edit in place. Enter or the tick saves (async onsave shows a spinner), Escape or the cross cancels."
+	code={inlineCode}
+>
+	<div class="stack">
+		<InlineEdit
+			value={inlineName}
+			onsave={async (value) => {
+				await new Promise((resolve) => setTimeout(resolve, 600));
+				inlineName = value;
+			}}
+		/>
+		<span class="hint">Current value: “{inlineName}”</span>
+	</div>
 </Demo>
 
 <style>

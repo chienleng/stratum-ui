@@ -6,6 +6,7 @@
  */
 
 import { untrack } from 'svelte';
+import { seriesVar } from '../theme/tokens.js';
 import { convert } from '../utils/si-units.js';
 import { getNumberFormat, getFormattedDate, getFormattedTime } from '../utils/number-format.js';
 import { transformToProportion } from '../utils/data-transform.js';
@@ -53,6 +54,18 @@ export default class ChartStore {
 	seriesColours = $state<Record<string, string>>({});
 
 	visibleSeriesColours = $derived(this.visibleSeriesNames.map((name) => this.seriesColours[name]));
+
+	/**
+	 * Colour for a series: the configured colour, falling back to the theme
+	 * series cycle by position. The single resolution point for renderers, so
+	 * a store without explicit colours still gets distinct cycle colours.
+	 */
+	colourFor(name: string): string {
+		const configured = this.seriesColours[name];
+		if (configured) return configured;
+		const index = this.seriesNames.indexOf(name);
+		return seriesVar((index >= 0 ? index : 0) + 1);
+	}
 
 	seriesLabels = $state<Record<string, string>>({});
 

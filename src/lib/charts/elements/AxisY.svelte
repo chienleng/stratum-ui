@@ -13,6 +13,10 @@
 	const { padding, xRange, yScale, xScale } = getLayerCake();
 
 	interface Props {
+		/** Which side of the chart the axis sits on. 'right' anchors labels
+		 *  just past the right edge of the plot area and spans gridlines
+		 *  across the plot only. */
+		side?: 'left' | 'right';
 		/** Show horizontal gridlines */
 		gridlines?: boolean;
 		/** Show tick marks on axis */
@@ -31,9 +35,10 @@
 		xTick?: number;
 		/** Y offset for tick labels */
 		yTick?: number;
-		/** dx offset for tick labels */
+		/** dx offset for tick labels. Defaults to 0 on the left, 8 on the right. */
 		dxTick?: number;
-		/** dy offset for tick labels */
+		/** dy offset for tick labels. Defaults to -4 on the left, 0 on the right
+		 *  (right-side labels centre on the tick via dominant-baseline). */
 		dyTick?: number;
 		/** Text anchor for labels */
 		textAnchor?: 'start' | 'middle' | 'end';
@@ -50,6 +55,7 @@
 	}
 
 	let {
+		side = 'left',
 		gridlines = true,
 		tickMarks = false,
 		stroke = undefined,
@@ -59,8 +65,8 @@
 		ticks = 4,
 		xTick = 0,
 		yTick = 0,
-		dxTick = 0,
-		dyTick = -4,
+		dxTick = undefined,
+		dyTick = undefined,
 		textAnchor = 'start',
 		yLabelStartPos = null,
 		zeroValueStroke = undefined,
@@ -83,10 +89,19 @@
 	// Check if scale has bandwidth (band scale)
 	let isBandwidth = $derived(typeof $yScale.bandwidth === 'function');
 
+	let isRight = $derived(side === 'right');
+
 	// Calculate x start position for labels
 	let xStart = $derived(
-		yLabelStartPos ? $xScale(yLabelStartPos) : $xRange[0] + (isBandwidth ? $padding.left : 0)
+		isRight
+			? $xRange[1]
+			: yLabelStartPos
+				? $xScale(yLabelStartPos)
+				: $xRange[0] + (isBandwidth ? $padding.left : 0)
 	);
+
+	let resolvedDxTick = $derived(dxTick ?? (isRight ? 8 : 0));
+	let resolvedDyTick = $derived(dyTick ?? (isRight ? 0 : -4));
 
 	// Generate tick values
 	let tickVals = $derived.by(() => {
@@ -99,7 +114,7 @@
 
 <g
 	class="axis y-axis"
-	transform="translate({-$padding.left}, 0)"
+	transform="translate({isRight ? 0 : -$padding.left}, 0)"
 	clip-path={clipPathId ? `url(#${clipPathId})` : ''}
 >
 	{#each tickVals as tick, i (i)}
@@ -119,7 +134,8 @@
 					data-zero={isZero || undefined}
 					style:stroke={(isZero ? zeroValueStroke : stroke) ?? null}
 					stroke-dasharray={isZero ? 'none' : '3'}
-					x2="100%"
+					x1={isRight ? $xRange[0] - $xRange[1] : 0}
+					x2={isRight ? 0 : '100%'}
 					y1={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 					y2={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 				/>
@@ -131,7 +147,8 @@
 					class="gridline"
 					style:stroke={stroke ?? null}
 					stroke-dasharray="5"
-					x2="100%"
+					x1={isRight ? $xRange[0] - $xRange[1] : 0}
+					x2={isRight ? 0 : '100%'}
 					y1={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 					y2={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 				/>
@@ -142,7 +159,7 @@
 				<line
 					class="tick-mark"
 					x1="0"
-					x2={isBandwidth ? -6 : 6}
+					x2={isBandwidth || isRight ? -6 : 6}
 					y1={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 					y2={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 				/>
@@ -156,9 +173,10 @@
 				style:fill={textFill ?? null}
 				x={xTick}
 				y={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 + yTick : yTick}
-				dx={isBandwidth ? -9 : dxTick}
-				dy={isBandwidth ? 4 : isLastTick && lastTickDy != null ? lastTickDy : dyTick}
+				dx={isBandwidth ? -9 : resolvedDxTick}
+				dy={isBandwidth ? 4 : isLastTick && lastTickDy != null ? lastTickDy : resolvedDyTick}
 				style:text-anchor={isBandwidth ? 'end' : textAnchor}
+				style:dominant-baseline={isRight ? 'middle' : null}
 			>
 				{formatTick(tick)}
 			</text>

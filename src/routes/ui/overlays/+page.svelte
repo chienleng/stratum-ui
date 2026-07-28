@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		Button,
+		ConfirmDialog,
 		Modal,
 		Overlay,
 		Sheet,
@@ -14,7 +15,12 @@
 	let showModal = $state(false);
 	let showSheet = $state(false);
 	let showBottomSheet = $state(false);
+	let showConfirm = $state(false);
+	let confirmResult = $state('');
 	let lastAction = $state('');
+
+	const confirmCode =
+		'<ConfirmDialog\n\ttitle="Delete device"\n\tonclose={() => (open = false)}\n\tconfirmLabel="Delete"\n\tonconfirm={handleDelete}\n>\n\tThis permanently removes the device and its readings.\n</ConfirmDialog>';
 </script>
 
 <svelte:head>
@@ -39,6 +45,35 @@
 				{/snippet}
 			</Modal>
 		</Overlay>
+	{/if}
+</Demo>
+
+<Demo
+	title="Confirm dialog"
+	description="Destructive-action confirmation over Overlay + Modal. Supply `onconfirm` for the simple case, or a `confirm` snippet to wrap the action in your own form."
+	code={confirmCode}
+>
+	<div class="menu-row">
+		<Button variant="destructive" onclick={() => (showConfirm = true)}>Delete device</Button>
+		{#if confirmResult}
+			<span class="readout">Result: {confirmResult}</span>
+		{/if}
+	</div>
+	{#if showConfirm}
+		<ConfirmDialog
+			title="Delete device"
+			onclose={() => {
+				confirmResult = 'cancelled';
+				showConfirm = false;
+			}}
+			confirmLabel="Delete"
+			onconfirm={() => {
+				confirmResult = 'confirmed';
+				showConfirm = false;
+			}}
+		>
+			This permanently removes the device and all of its readings.
+		</ConfirmDialog>
 	{/if}
 </Demo>
 

@@ -2,12 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'svelte/server';
 import { createRawSnippet } from 'svelte';
 import Alert from './Alert.svelte';
+import Avatar from './Avatar.svelte';
+import BackLink from './BackLink.svelte';
 import Badge from './Badge.svelte';
 import Button from './Button.svelte';
+import EmptyState from './EmptyState.svelte';
+import IconBadge from './IconBadge.svelte';
 import Modal from './Modal.svelte';
+import PageHeader from './PageHeader.svelte';
 import Pagination from './Pagination.svelte';
+import PullToRefresh from './PullToRefresh.svelte';
+import SectionLabel from './SectionLabel.svelte';
 import Spinner from './Spinner.svelte';
 import Table from './Table.svelte';
+import DetailField from './detail/DetailField.svelte';
+import DetailGrid from './detail/DetailGrid.svelte';
+import StatTile from './stat/StatTile.svelte';
+import ChipGroup from '../forms/ChipGroup.svelte';
+import Field from '../forms/Field.svelte';
+import InlineEdit from '../forms/InlineEdit.svelte';
 import SearchInput from '../forms/SearchInput.svelte';
 import Select from '../forms/Select.svelte';
 
@@ -140,6 +153,200 @@ describe('Select', () => {
 			props: { variant: 'field', options: [{ label: 'A', value: 'a' }] }
 		});
 		expect(body).toContain('data-variant="field"');
+	});
+});
+
+describe('IconBadge', () => {
+	it('renders size and tone as data attributes', () => {
+		const { body } = render(IconBadge, {
+			props: { size: 'lg', tone: 'danger', children: text('<svg></svg>') }
+		});
+		expect(body).toContain('su-icon-badge');
+		expect(body).toContain('data-size="lg"');
+		expect(body).toContain('data-tone="danger"');
+	});
+});
+
+describe('EmptyState', () => {
+	it('renders title, description and variant', () => {
+		const { body } = render(EmptyState, {
+			props: { title: 'No devices', description: 'Add one to get started.', variant: 'card' }
+		});
+		expect(body).toContain('role="status"');
+		expect(body).toContain('data-variant="card"');
+		expect(body).toContain('No devices');
+		expect(body).toContain('Add one to get started.');
+	});
+});
+
+describe('DetailField', () => {
+	it('renders label over value inside dt/dd', () => {
+		const { body } = render(DetailField, {
+			props: { label: 'Device EUI', value: 'A1B2', mono: true }
+		});
+		expect(body).toContain('<dt');
+		expect(body).toContain('Device EUI');
+		expect(body).toContain('data-mono');
+		expect(body).toContain('A1B2');
+	});
+
+	it('renders an en dash for a missing value', () => {
+		const { body } = render(DetailField, { props: { label: 'Location', value: null } });
+		expect(body).toContain('–');
+	});
+});
+
+describe('DetailGrid', () => {
+	it('renders a dl with the column count', () => {
+		const { body } = render(DetailGrid, { props: { columns: 3, children: text('fields') } });
+		expect(body).toContain('<dl');
+		expect(body).toContain('--_cols: 3');
+	});
+});
+
+describe('StatTile', () => {
+	it('renders a div by default and an anchor with href', () => {
+		const plain = render(StatTile, { props: { label: 'Devices', value: 12 } });
+		expect(plain.body).toContain('su-stat-tile');
+		expect(plain.body).not.toContain('<a');
+
+		const linked = render(StatTile, { props: { label: 'Devices', value: 12, href: '/devices' } });
+		expect(linked.body).toContain('<a');
+		expect(linked.body).toContain('href="/devices"');
+		expect(linked.body).toContain('data-interactive');
+	});
+});
+
+describe('SectionLabel', () => {
+	it('renders the requested element', () => {
+		const { body } = render(SectionLabel, { props: { as: 'h2', children: text('Core') } });
+		expect(body).toContain('<h2');
+		expect(body).toContain('su-section-label');
+		expect(body).toContain('Core');
+	});
+});
+
+describe('BackLink', () => {
+	it('renders a link with default text and icon', () => {
+		const { body } = render(BackLink, { props: { href: '/devices' } });
+		expect(body).toContain('href="/devices"');
+		expect(body).toContain('Back');
+		expect(body).toContain('<svg');
+	});
+});
+
+describe('Avatar', () => {
+	it('renders the image when src is set', () => {
+		const { body } = render(Avatar, { props: { src: '/a.png', initials: 'ST', alt: 'Steven' } });
+		expect(body).toContain('<img');
+		expect(body).toContain('src="/a.png"');
+	});
+
+	it('falls back to initials without src', () => {
+		const { body } = render(Avatar, { props: { initials: 'ST', size: 'lg' } });
+		expect(body).not.toContain('<img');
+		expect(body).toContain('ST');
+		expect(body).toContain('data-size="lg"');
+	});
+});
+
+describe('PageHeader', () => {
+	it('renders title, subtitle, back link and actions', () => {
+		const { body } = render(PageHeader, {
+			props: {
+				title: 'A84041B2C1D9E001',
+				titleFont: 'mono',
+				subtitle: 'Gateway device',
+				backHref: '/devices',
+				backLabel: 'Back to devices',
+				actions: text('Edit')
+			}
+		});
+		expect(body).toContain('su-page-header');
+		expect(body).toContain('data-font="mono"');
+		expect(body).toContain('A84041B2C1D9E001');
+		expect(body).toContain('Gateway device');
+		expect(body).toContain('href="/devices"');
+		expect(body).toContain('Back to devices');
+		expect(body).toContain('Edit');
+	});
+});
+
+describe('PullToRefresh', () => {
+	it('renders its children with the indicator hidden at rest', () => {
+		const { body } = render(PullToRefresh, {
+			props: { onrefresh: () => {}, children: text('List content') }
+		});
+		expect(body).toContain('su-pull-to-refresh');
+		expect(body).toContain('List content');
+		expect(body).not.toContain('indicator-track');
+	});
+});
+
+describe('Field', () => {
+	it('wires the label to the provided id and renders the error', () => {
+		const control = createRawSnippet<[{ id: string; describedBy: string | undefined }]>((args) => ({
+			render: () => `<input id="${args().id}" aria-describedby="${args().describedBy}" />`
+		}));
+		const { body } = render(Field, {
+			props: {
+				label: 'Name',
+				forId: 'name-1',
+				required: true,
+				error: 'Required',
+				children: control
+			}
+		});
+		expect(body).toContain('for="name-1"');
+		expect(body).toContain('id="name-1"');
+		expect(body).toContain('data-invalid');
+		expect(body).toContain('Required');
+		expect(body).toContain('aria-describedby');
+	});
+
+	it('renders the hint when there is no error', () => {
+		const control = createRawSnippet<[{ id: string; describedBy: string | undefined }]>((args) => ({
+			render: () => `<input id="${args().id}" />`
+		}));
+		const { body } = render(Field, {
+			props: { label: 'Email', hint: 'Work address preferred', children: control }
+		});
+		expect(body).toContain('Work address preferred');
+		expect(body).not.toContain('data-invalid');
+	});
+});
+
+describe('ChipGroup', () => {
+	it('marks selected chips with aria-pressed', () => {
+		const { body } = render(ChipGroup, {
+			props: {
+				options: [
+					{ value: 'a', label: 'Alpha' },
+					{ value: 'b', label: 'Beta' }
+				],
+				selected: ['a'],
+				onchange: () => {}
+			}
+		});
+		expect(body).toContain('su-chip-group');
+		expect(body).toContain('aria-pressed="true"');
+		expect(body).toContain('aria-pressed="false"');
+		expect(body).toContain('Alpha');
+	});
+});
+
+describe('InlineEdit', () => {
+	it('renders the value in display mode', () => {
+		const { body } = render(InlineEdit, { props: { value: 'Paddock 3', onsave: () => {} } });
+		expect(body).toContain('su-inline-edit');
+		expect(body).toContain('Paddock 3');
+	});
+
+	it('renders the empty text without a value', () => {
+		const { body } = render(InlineEdit, {
+			props: { value: '', onsave: () => {}, emptyText: 'Unnamed' }
+		});
+		expect(body).toContain('Unnamed');
 	});
 });
 

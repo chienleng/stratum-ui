@@ -1,6 +1,9 @@
 export { default as ButtonIcon } from './ButtonIcon.svelte';
 export { default as Checkbox } from './Checkbox.svelte';
 export { default as CheckboxTree, type CheckboxTreeNode } from './CheckboxTree.svelte';
+export { default as ChipGroup, type ChipOption } from './ChipGroup.svelte';
+export { default as Field } from './Field.svelte';
+export { default as InlineEdit } from './InlineEdit.svelte';
 export { default as MultiSelect, type MultiSelectOption } from './MultiSelect.svelte';
 export { default as Radio } from './Radio.svelte';
 export { default as RadioBigButton } from './RadioBigButton.svelte';

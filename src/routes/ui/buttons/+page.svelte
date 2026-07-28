@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, ButtonGroup } from '@chienleng/stratum-ui/ui';
+	import { BackLink, Button, ButtonGroup } from '@chienleng/stratum-ui/ui';
 	import Plus from '@chienleng/stratum-ui/icons/Plus.svelte';
 	import Demo from '../../_showcase/Demo.svelte';
 
@@ -18,6 +18,7 @@
 	const variantsCode =
 		'<Button variant="primary">Primary</Button>\n<Button variant="contrast">Contrast</Button>';
 	const radiusCode = '<Button style="--su-button-radius: var(--su-radius-full)">Pill</Button>';
+	const backLinkCode = '<BackLink href="/devices">Back to devices</BackLink>';
 
 	let groupValue = $state('7d');
 	let saving = $state(false);
@@ -98,7 +99,25 @@
 	/>
 </Demo>
 
+<Demo
+	title="Back link"
+	description="Inline arrow-left link for the top of detail pages. Text defaults to 'Back'."
+	code={backLinkCode}
+>
+	<div class="back-links">
+		<BackLink href="#back">Back to devices</BackLink>
+		<BackLink href="#back" />
+	</div>
+</Demo>
+
 <style>
+	.back-links {
+		display: flex;
+		flex-direction: column;
+		gap: var(--su-space-2, 0.5rem);
+		align-items: flex-start;
+	}
+
 	h1 {
 		font-size: var(--su-font-size-3xl, 2.25rem);
 		margin-bottom: var(--su-space-6, 1.5rem);

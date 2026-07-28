@@ -20,9 +20,12 @@
 </div>
 
 <section class="tiles">
-	<a href="/charts/stratum">
+	<a href="/charts/composed">
 		<h2>Charts</h2>
-		<p>Stacked area, bar, grouped bar, mini charts and brushes built on LayerCake.</p>
+		<p>
+			One store-driven system of lego pieces — from full stacked dashboards with synced hover,
+			brushing and tooltips down to sparklines and gauges. See it all composed on one page.
+		</p>
 	</a>
 	<a href="/ui/buttons">
 		<h2>UI</h2>

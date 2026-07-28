@@ -5,11 +5,16 @@
 		{
 			title: 'Charts',
 			links: [
+				{ href: '/charts/composed', label: 'Composed dashboard' },
 				{ href: '/charts/stratum', label: 'Stratum chart' },
 				{ href: '/charts/stacked-area', label: 'Stacked area' },
 				{ href: '/charts/bar', label: 'Bar' },
 				{ href: '/charts/grouped-bar', label: 'Grouped bar' },
 				{ href: '/charts/mini', label: 'Mini charts' },
+				{ href: '/charts/line', label: 'Line chart' },
+				{ href: '/charts/sparkline', label: 'Sparkline & gauge' },
+				{ href: '/charts/heatmap', label: 'Heatmap' },
+				{ href: '/charts/network', label: 'Network graph' },
 				{ href: '/charts/date-brush', label: 'Date brush' }
 			]
 		},

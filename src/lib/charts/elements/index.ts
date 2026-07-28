@@ -11,6 +11,9 @@ export { default as Line } from './Line.svelte';
 export { default as GroupedBar } from './GroupedBar.svelte';
 export { default as StackedBar } from './StackedBar.svelte';
 export { default as NetTotalLine } from './NetTotalLine.svelte';
+export { default as SparklinePath } from './SparklinePath.svelte';
+export { default as SparklineHoverDot } from './SparklineHoverDot.svelte';
+export { default as GradientArea } from './GradientArea.svelte';
 
 // Axes
 export { default as AxisX } from './AxisX.svelte';

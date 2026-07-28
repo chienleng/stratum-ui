@@ -45,3 +45,20 @@ code,
 pre {
 	font-family: var(--su-font-mono);
 }
+
+/* Page heading + optional intro paragraph — shared by every showcase page so
+   the pages don't each carry a copy. */
+main > h1 {
+	font-size: var(--su-font-size-3xl);
+	margin-bottom: var(--su-space-6);
+}
+
+main > h1:has(+ .intro) {
+	margin-bottom: var(--su-space-3);
+}
+
+main > .intro {
+	color: var(--su-text-muted);
+	max-width: 44em;
+	margin-bottom: var(--su-space-6);
+}

@@ -6,7 +6,7 @@
  * solar as a diurnal bell, wind as smoothed noise, baseload with slow drift,
  * battery as signed charge/discharge.
  */
-import type { SeriesRow } from '@chienleng/stratum-ui/charts';
+import type { SeriesDatum, SeriesRow } from '@chienleng/stratum-ui/charts';
 
 export function mulberry32(seed: number) {
 	let a = seed >>> 0;
@@ -142,6 +142,40 @@ export function sparkSeries(n = 48, seed = 11): SeriesRow[] {
 		const time = end - (n - 1 - i) * 1_800_000;
 		return { time, date: new Date(time), value: Math.round(walk()) };
 	});
+}
+
+/**
+ * Deterministic tank-level walk (%): slow drain with occasional refills.
+ * Plain `{date, value}` rows for `createSeriesStore()` demos.
+ */
+export function levelSeries(seed: number, hours = 72, round = false): SeriesDatum[] {
+	const rand = mulberry32(seed);
+	const end = new Date('2025-11-14T09:00:00');
+	const rows: SeriesDatum[] = [];
+	let level = 45 + rand() * 35;
+	for (let i = hours; i >= 0; i--) {
+		level -= rand() * 1.3;
+		if (rand() > 0.97) level += 20 + rand() * 25;
+		level = Math.max(2, Math.min(100, level));
+		rows.push({
+			date: new Date(end.getTime() - i * 3_600_000),
+			value: round ? Math.round(level) : level
+		});
+	}
+	return rows;
+}
+
+/** Deterministic rainfall buckets (mm): mostly dry with a few bursts. */
+export function rainSeries(seed: number, buckets: number, intervalMs: number): SeriesDatum[] {
+	const rand = mulberry32(seed);
+	const end = new Date('2025-11-14T09:00:00');
+	const rows: SeriesDatum[] = [];
+	for (let i = buckets - 1; i >= 0; i--) {
+		const wet = rand() > 0.65;
+		const value = wet ? Math.round(rand() * rand() * 120) / 10 : 0;
+		rows.push({ date: new Date(end.getTime() - i * intervalMs), value });
+	}
+	return rows;
 }
 
 /** Demo series colour maps using the theme's categorical palette tokens. */

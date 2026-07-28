@@ -26,5 +26,6 @@ export {
 } from './number-format.js';
 export { transformToProportion, transformToChangeSince } from './data-transform.js';
 export { default as getSeqId } from './html-id-gen.js';
+export { getScrollParent } from './get-scroll-parent.js';
 export { default as getRequiredContext } from './get-context.js';
 export { stripDateTimezone } from './date-format.js';
