@@ -32,6 +32,12 @@ export default defineConfig({
 			}
 		})
 	],
+	optimizeDeps: {
+		// `svelte-maplibre-gl/vite` imports maplibre-gl v6's worker with a
+		// `?worker&url` query, which the dep pre-bundler cannot resolve. Leave it
+		// to Vite's own worker handling.
+		exclude: ['svelte-maplibre-gl']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [

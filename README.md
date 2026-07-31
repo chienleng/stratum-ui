@@ -152,6 +152,13 @@ Notes:
   styles plus an Esri World Imagery raster style for `satellite`). Override any
   of them per app via the `mapStyles` prop — e.g. self-hosted style JSON and
   glyphs: `mapStyles={{ light: '/map-styles/positron.json' }}`.
+- On `maplibre-gl` v6 (ESM-only) the tile worker is a separate module that
+  bundlers do not pick up on their own. Under Vite, side-effect import
+  `svelte-maplibre-gl/vite` once in the route/component that renders the map —
+  without it the worker 404s in a production build. That entry point also needs
+  `optimizeDeps: { exclude: ['svelte-maplibre-gl'] }` in your Vite config —
+  otherwise the dep pre-bundler chokes on its `?worker&url` import and `vite dev`
+  fails to start.
 - `svelte-maplibre-gl` injects `maplibre-gl.css` from CDN at runtime by
   default. Pass `autoloadGlobalCss={false}` and
   `import 'maplibre-gl/dist/maplibre-gl.css'` yourself to avoid the fetch.

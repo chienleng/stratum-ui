@@ -1,4 +1,7 @@
 <script lang="ts">
+	// Bundles maplibre-gl v6's ESM worker through Vite; without it the worker
+	// 404s in a production build.
+	import 'svelte-maplibre-gl/vite';
 	import { fuelTechColours, type FuelTechCode } from '@chienleng/stratum-ui';
 	import {
 		PointMap,
