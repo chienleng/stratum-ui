@@ -229,11 +229,13 @@
 
 	/* ── trigger ─────────────────────────────────────────────────────── */
 	.trigger {
-		display: flex;
+		/* inline-flex so the bordered trigger hugs its content instead of
+		   stretching to the full width of the containing block. */
+		display: inline-flex;
 		align-items: center;
 		gap: var(--su-space-1, 0.25rem);
 		padding: var(--su-space-1, 0.25rem) var(--su-space-2, 0.5rem);
-		border: none;
+		border: 1px solid var(--su-border, #e9ecef);
 		border-radius: var(--su-radius-md, 6px);
 		background-color: transparent;
 		color: var(--su-text, #1f2328);
@@ -257,6 +259,7 @@
 
 	/* ── field variant: bordered, full-width, input-like (mirrors TextInput) */
 	.su-select[data-variant='field'] .trigger {
+		display: flex;
 		justify-content: space-between;
 		width: 100%;
 		padding: var(--su-space-2, 0.5rem) var(--su-space-3, 0.75rem);

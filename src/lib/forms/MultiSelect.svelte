@@ -321,10 +321,13 @@
 
 	/* ── trigger ─────────────────────────────────────────────────────── */
 	.trigger {
-		display: flex;
+		/* inline-flex so the bordered trigger hugs its content instead of
+		   stretching to the full width of the containing block. */
+		display: inline-flex;
 		align-items: center;
 		gap: var(--su-space-5, 1.25rem);
 		padding: var(--su-space-1, 0.25rem) var(--su-space-2, 0.5rem);
+		border: 1px solid var(--su-border, #e9ecef);
 		border-radius: var(--su-radius-md, 6px);
 		color: var(--su-text, #1f2328);
 		font-size: var(--su-font-size-sm, 0.875rem);
