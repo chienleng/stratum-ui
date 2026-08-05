@@ -119,13 +119,25 @@
 	let width = $state(800);
 	let height = $state(500);
 
-	// Raw state, published once per tick via a shallow reassignment: d3-force
-	// reads/writes x/y/vx/vy many times per node per tick in its inner loops,
-	// so the nodes must be plain objects, not deep-reactive proxies — one
-	// invalidation per frame instead of thousands of proxy traps.
+	// d3-force reads/writes x/y/vx/vy many times per node per tick in its
+	// inner loops, so it owns plain, non-reactive arrays (internalNodes/
+	// internalLinks). Each tick publishes shallow CLONES into the raw state
+	// below: the clones' fresh identities are what make the each-block
+	// children re-render — d3 mutates its objects in place, so republishing
+	// the same references would leave every node's translate() stale (raw
+	// state items are not tracked property-by-property).
+	let internalNodes: SimNode[] = [];
+	let internalLinks: ResolvedLink[] = [];
 	let simNodes: SimNode[] = $state.raw([]);
 	let simLinks: ResolvedLink[] = $state.raw([]);
 	let simulation: Simulation<SimNode, undefined> | null = null;
+
+	// One shallow-clone pass per frame; link clones keep pointing at the live
+	// internal nodes, whose x/y are current at render time.
+	function publishFrame() {
+		simNodes = internalNodes.map((node) => ({ ...node }));
+		simLinks = internalLinks.map((link) => ({ ...link }));
+	}
 
 	let transform: ZoomTransform = $state({ k: 1, x: 0, y: 0 });
 
@@ -159,13 +171,14 @@
 
 		// d3-force mutates its nodes (x/y/vx/vy), so it gets copies; the
 		// original props stay pristine.
-		simNodes = nodes.map((node) => ({ ...node }));
+		internalNodes = nodes.map((node) => ({ ...node }));
 		const linkCopies: SimLink[] = links.map((link) => ({ ...link }));
-		simLinks = linkCopies as ResolvedLink[];
+		internalLinks = linkCopies as ResolvedLink[];
+		publishFrame();
 
-		if (simNodes.length === 0) return;
+		if (internalNodes.length === 0) return;
 
-		simulation = forceSimulation(simNodes)
+		simulation = forceSimulation(internalNodes)
 			.force(
 				'link',
 				forceLink<SimNode, SimLink>(linkCopies)
@@ -178,12 +191,7 @@
 				'collision',
 				forceCollide<SimNode>().radius((d) => radiusOf(d) + (forces.collidePadding ?? 10))
 			)
-			.on('tick', () => {
-				// Single shallow publish per frame; nodes and resolved links
-				// mutate in place, so both arrays re-announce together.
-				simNodes = simNodes.slice();
-				simLinks = simLinks.slice();
-			});
+			.on('tick', publishFrame);
 	}
 
 	function handleNodeClick(node: SimNode) {
@@ -197,12 +205,13 @@
 		onnodehover?.(node);
 	}
 
-	// Positioned via a derived that tracks the per-tick publish, so the
-	// tooltip follows a still-moving node.
+	// Positioned via a derived that resolves the hovered node in the current
+	// frame's publish (the stored object is that frame's clone, frozen), so
+	// the tooltip follows a still-moving node.
 	const hoverTooltipPos = $derived.by(() => {
-		void simNodes;
-		const node = hoveredNode;
-		if (!node || node.id === selectedId || node.x == null || node.y == null) return null;
+		if (!hoveredNode || hoveredNode.id === selectedId) return null;
+		const node = simNodes.find((n) => n.id === hoveredNode!.id);
+		if (!node || node.x == null || node.y == null) return null;
 		return {
 			left: node.x * transform.k + transform.x + 25,
 			top: node.y * transform.k + transform.y - 10
@@ -256,7 +265,11 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<svg bind:this={svg} {width} {height} onclick={() => (selectedId = null)}>
 		<g transform="translate({transform.x}, {transform.y}) scale({transform.k})">
-			{#each simLinks as link (link)}
+			<!-- Deliberately unkeyed, same as the nodes below: every frame
+			     publishes fresh clones in stable order, so keying by object
+			     would recreate each line element per tick. -->
+			<!-- eslint-disable-next-line svelte/require-each-key -->
+			{#each simLinks as link}
 				{@const sourceNode = typeof link.source === 'string' ? null : (link.source as SimNode)}
 				{@const targetNode = typeof link.target === 'string' ? null : (link.target as SimNode)}
 				{@const highlighted = hoveredNode ? isLinkConnected(link, connected) : false}
