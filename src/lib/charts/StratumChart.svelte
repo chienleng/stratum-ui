@@ -448,7 +448,7 @@
 
 	.su-tooltip-slot {
 		position: relative;
-		z-index: var(--su-z-dropdown, 1000);
+		z-index: var(--su-z-dropdown, 1150);
 	}
 
 	.su-tooltip-slot-card {
@@ -489,7 +489,7 @@
 		pointer-events: none;
 		position: absolute;
 		inset: 0;
-		z-index: var(--su-z-dropdown, 1000);
+		z-index: var(--su-z-dropdown, 1150);
 		display: flex;
 		align-items: center;
 		justify-content: center;

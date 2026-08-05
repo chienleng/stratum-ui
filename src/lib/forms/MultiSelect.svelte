@@ -447,7 +447,7 @@
 		border-radius: var(--su-radius-md, 6px);
 		background-color: var(--su-surface, #ffffff);
 		box-shadow: var(--su-shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1));
-		z-index: var(--su-z-dropdown, 1000);
+		z-index: var(--su-z-dropdown, 1150);
 	}
 
 	.list li {

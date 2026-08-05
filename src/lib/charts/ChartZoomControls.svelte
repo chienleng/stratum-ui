@@ -52,7 +52,7 @@
 	.su-chart-zoom-controls {
 		position: absolute;
 		top: 0;
-		z-index: var(--su-z-dropdown, 1000);
+		z-index: var(--su-z-dropdown, 1150);
 		display: flex;
 		align-items: center;
 		gap: 2px; /* gap-0.5 = 1.25px real */

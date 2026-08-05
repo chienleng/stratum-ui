@@ -375,7 +375,7 @@
 		position: absolute;
 		top: calc(100% + 4px);
 		left: 0;
-		z-index: var(--su-z-dropdown, 1000);
+		z-index: var(--su-z-dropdown, 1150);
 		min-width: 100%;
 		padding: var(--su-space-1, 0.25rem);
 		background: var(--su-surface, #ffffff);

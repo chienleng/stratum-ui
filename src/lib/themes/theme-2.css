@@ -99,7 +99,7 @@
 	--su-shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
 
 	/* ── z-scale ──────────────────────────────────────────────────────── */
-	--su-z-dropdown: 1000;
+	--su-z-dropdown: 1150;
 	--su-z-sticky: 1020;
 	--su-z-modal: 1100;
 	--su-z-tooltip: 1200;

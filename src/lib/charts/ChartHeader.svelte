@@ -275,7 +275,7 @@
 
 	.options-panel {
 		position: absolute;
-		z-index: var(--su-z-dropdown, 1000);
+		z-index: var(--su-z-dropdown, 1150);
 		background: color-mix(in srgb, var(--su-surface, #ffffff) 70%, transparent);
 		backdrop-filter: blur(4px) saturate(150%);
 		border: 1px solid color-mix(in srgb, var(--su-border-strong, #ced4da) 40%, transparent);
