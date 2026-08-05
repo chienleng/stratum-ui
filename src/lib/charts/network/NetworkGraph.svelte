@@ -132,11 +132,18 @@
 	let simLinks: ResolvedLink[] = $state.raw([]);
 	let simulation: Simulation<SimNode, undefined> | null = null;
 
-	// One shallow-clone pass per frame; link clones keep pointing at the live
-	// internal nodes, whose x/y are current at render time.
+	// One shallow-clone pass per frame. Link endpoints are snapshotted too:
+	// forceLink resolves source/target to the internal node objects, whose
+	// identity is stable across ticks — republishing those references would
+	// leave the line coordinates stale (the template reads them through
+	// {@const} deriveds, which don't re-fire for an unchanged reference).
 	function publishFrame() {
 		simNodes = internalNodes.map((node) => ({ ...node }));
-		simLinks = internalLinks.map((link) => ({ ...link }));
+		simLinks = internalLinks.map((link) => ({
+			...link,
+			source: typeof link.source === 'string' ? link.source : { ...link.source },
+			target: typeof link.target === 'string' ? link.target : { ...link.target }
+		}));
 	}
 
 	let transform: ZoomTransform = $state({ k: 1, x: 0, y: 0 });
