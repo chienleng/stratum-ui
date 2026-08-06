@@ -147,6 +147,7 @@
 	--su-success-100: #dcfce7;
 	--su-success-500: #22c55e;
 	--su-success-600: #16a34a;
+	--su-success-700: #15803d;
 
 	/* Data accent (blue — highlights, selections, focus in data UI).
 	   Distinct from --su-accent, which is the primary-action colour. */

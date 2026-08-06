@@ -97,7 +97,8 @@ export const tokenGroups = {
 		'--su-success-50',
 		'--su-success-100',
 		'--su-success-500',
-		'--su-success-600'
+		'--su-success-600',
+		'--su-success-700'
 	],
 	overlay: ['--su-overlay', '--su-tooltip-bg', '--su-tooltip-text', '--su-focus-ring'],
 	fontFamily: ['--su-font-sans', '--su-font-display', '--su-font-mono'],

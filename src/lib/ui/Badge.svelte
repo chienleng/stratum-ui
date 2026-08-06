@@ -45,20 +45,24 @@
 		white-space: nowrap;
 	}
 
-	/* ── variants (reassign locals only) ─────────────────────────────── */
+	/* ── variants (reassign locals only) ─────────────────────────────────
+	   Status text mixes 40% status colour into 60% text: the highest status
+	   share that still clears WCAG 4.5:1 on the 12% tinted background across
+	   all three themes at this 12px size (theme-1's light #70d26e success is
+	   the binding case at 4.99:1). */
 	.su-badge[data-variant='success'] {
 		--_bg: color-mix(in srgb, var(--su-success, #16a34a) 12%, var(--su-surface, #ffffff));
-		--_fg: color-mix(in srgb, var(--su-success, #16a34a) 85%, var(--su-text, #1f2328));
+		--_fg: color-mix(in srgb, var(--su-success, #16a34a) 40%, var(--su-text, #1f2328));
 	}
 
 	.su-badge[data-variant='danger'] {
 		--_bg: color-mix(in srgb, var(--su-danger, #dc2626) 12%, var(--su-surface, #ffffff));
-		--_fg: color-mix(in srgb, var(--su-danger, #dc2626) 85%, var(--su-text, #1f2328));
+		--_fg: color-mix(in srgb, var(--su-danger, #dc2626) 40%, var(--su-text, #1f2328));
 	}
 
 	.su-badge[data-variant='warning'] {
 		--_bg: color-mix(in srgb, var(--su-warning, #d97706) 12%, var(--su-surface, #ffffff));
-		--_fg: color-mix(in srgb, var(--su-warning, #d97706) 85%, var(--su-text, #1f2328));
+		--_fg: color-mix(in srgb, var(--su-warning, #d97706) 40%, var(--su-text, #1f2328));
 	}
 
 	.su-badge[data-variant='info'] {
