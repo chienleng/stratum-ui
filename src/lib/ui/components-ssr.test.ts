@@ -18,8 +18,13 @@ import Table from './Table.svelte';
 import DetailField from './detail/DetailField.svelte';
 import DetailGrid from './detail/DetailGrid.svelte';
 import StatTile from './stat/StatTile.svelte';
+import Toaster from './toast/Toaster.svelte';
+import { createToastStore } from './toast/toast-store.svelte.js';
 import ChipGroup from '../forms/ChipGroup.svelte';
+import CurrencyInput from '../forms/CurrencyInput.svelte';
+import DateField from '../forms/DateField.svelte';
 import Field from '../forms/Field.svelte';
+import Textarea from '../forms/Textarea.svelte';
 import InlineEdit from '../forms/InlineEdit.svelte';
 import SearchInput from '../forms/SearchInput.svelte';
 import Select from '../forms/Select.svelte';
@@ -398,5 +403,67 @@ describe('SearchInput', () => {
 		const { body } = render(SearchInput, { props: { value: 'bays' } });
 		expect(body).toContain('value="bays"');
 		expect(body).toContain('Clear search');
+	});
+});
+
+describe('Textarea', () => {
+	it('renders a styled textarea carrying rest attributes for Field wiring', () => {
+		const { body } = render(Textarea, {
+			props: { value: 'Notes', rows: 5, id: 'notes', 'aria-describedby': 'notes-hint' }
+		});
+		expect(body).toContain('su-textarea');
+		expect(body).toContain('rows="5"');
+		expect(body).toContain('id="notes"');
+		expect(body).toContain('aria-describedby="notes-hint"');
+		expect(body).toContain('Notes');
+	});
+});
+
+describe('DateField', () => {
+	it('renders a native date input with the YYYY-MM-DD value', () => {
+		const { body } = render(DateField, {
+			props: { value: '2026-06-30', name: 'issue_date', id: 'issue' }
+		});
+		expect(body).toContain('type="date"');
+		expect(body).toContain('value="2026-06-30"');
+		expect(body).toContain('name="issue_date"');
+		expect(body).toContain('id="issue"');
+	});
+});
+
+describe('CurrencyInput', () => {
+	it('renders the symbol adornment and a decimal text input', () => {
+		const { body } = render(CurrencyInput, {
+			props: { name: 'amount', value: '110.00', id: 'amount' }
+		});
+		expect(body).toContain('aria-hidden="true"');
+		expect(body).toContain('$');
+		expect(body).toContain('inputmode="decimal"');
+		expect(body).toContain('name="amount"');
+		expect(body).toContain('id="amount"');
+	});
+
+	it('honours a custom symbol', () => {
+		const { body } = render(CurrencyInput, { props: { symbol: '€' } });
+		expect(body).toContain('€');
+	});
+});
+
+describe('Toaster', () => {
+	it('renders the live region even when the store is empty', () => {
+		const toasts = createToastStore();
+		const { body } = render(Toaster, { props: { toasts } });
+		expect(body).toContain('role="status"');
+		expect(body).toContain('aria-live="polite"');
+		expect(body).toContain('su-toaster');
+	});
+
+	it('renders toasts with their variant and a labelled dismiss button', () => {
+		const toasts = createToastStore({ duration: 0 });
+		toasts.show('Invoice saved', { variant: 'success' });
+		const { body } = render(Toaster, { props: { toasts } });
+		expect(body).toContain('Invoice saved');
+		expect(body).toContain('data-variant="success"');
+		expect(body).toContain('aria-label="Dismiss notification"');
 	});
 });
