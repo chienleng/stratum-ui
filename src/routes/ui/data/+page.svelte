@@ -48,6 +48,8 @@
 
 	const tableCode =
 		"<Table headers={['Facility', 'Region']}>\n\t<tr><td>Bayswater</td><td>NSW</td></tr>\n</Table>";
+	const cellUtilsCode =
+		'<Table caption="Generation facilities" cellUtils\n\theaders={[\'Facility\', { label: \'Actions\', srOnly: true }]}>\n\t<tr>\n\t\t<td><a class="row-link" href="…">Bayswater</a></td>\n\t\t<td class="row-actions"><a href="…">Edit</a></td>\n\t</tr>\n</Table>';
 </script>
 
 <svelte:head>
@@ -68,6 +70,32 @@
 				<td>{facility.region}</td>
 				<td>{facility.tech}</td>
 				<td class="num">{facility.mw.toLocaleString('en-AU')}</td>
+			</tr>
+		{/each}
+	</Table>
+</Demo>
+
+<Demo
+	title="Table with caption and cell utilities"
+	description="caption renders a visually-hidden <caption> (name your tables — essential with several per page); cellUtils opts consumer rows into the documented classes: td.num (right-aligned tabular numerals), .mono, .muted, .date-cell, .row-link, td.row-actions. srOnly headers keep an accessible name on visually-empty action columns."
+	code={cellUtilsCode}
+>
+	<Table
+		caption="Generation facilities"
+		cellUtils
+		headers={[
+			'Facility',
+			'Region',
+			{ label: 'Capacity (MW)', class: 'num' },
+			{ label: 'Actions', srOnly: true }
+		]}
+	>
+		{#each facilities.slice(0, 3) as facility (facility.name)}
+			<tr>
+				<td><a class="row-link" href="#top">{facility.name}</a></td>
+				<td class="muted">{facility.region}</td>
+				<td class="num mono">{facility.mw.toLocaleString('en-AU')}</td>
+				<td class="row-actions"><a href="#top">Edit</a></td>
 			</tr>
 		{/each}
 	</Table>

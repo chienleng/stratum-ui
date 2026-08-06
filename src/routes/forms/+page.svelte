@@ -3,6 +3,8 @@
 		Checkbox,
 		CheckboxTree,
 		ChipGroup,
+		CurrencyInput,
+		DateField,
 		Field,
 		InlineEdit,
 		MultiSelect,
@@ -11,6 +13,7 @@
 		RangeSelector,
 		SearchInput,
 		Select,
+		Textarea,
 		TextInput,
 		Toggle,
 		type CheckboxTreeNode,
@@ -67,10 +70,18 @@
 	let selectedChips = $state(['orgs', 'sites']);
 
 	let inlineName = $state('Bore pump 2');
+	let notesValue = $state('');
+	let readingDate = $state('2026-06-30');
+	let amountParsed = $state<number | null>(1234.5);
+	let labelledRegion = $state('nsw');
 	const fieldCode =
 		'<Field label="Name" required error={errors.name}>\n\t{#snippet children({ id, describedBy })}\n\t\t<TextInput {id} aria-describedby={describedBy} bind:value={name} />\n\t{/snippet}\n</Field>';
 	const chipCode =
 		'<ChipGroup options={types} selected={selectedTypes} minSelected={1} onchange={(v) => (selectedTypes = v)} />';
+	const labelledSelectCode =
+		'<Field label="Region">\n\t{#snippet children({ id })}\n\t\t<Select {id} variant="field" selected={region} options={...} />\n\t{/snippet}\n</Field>';
+	const currencyCode =
+		'<CurrencyInput name="amount" value="1234.50" oninput={(parsed) => (preview = parsed)} />';
 	const inlineCode = '<InlineEdit value={name} onsave={async (v) => await rename(v)} />';
 
 	const treeNodes: CheckboxTreeNode[] = [
@@ -294,6 +305,89 @@
 </Demo>
 
 <Demo
+	title="Select inside Field"
+	description="Pass the Field snippet's generated id through to Select so the label names — and click-focuses — the dropdown trigger."
+	code={labelledSelectCode}
+>
+	<div class="stack">
+		<Field label="Region">
+			{#snippet children({ id })}
+				<Select
+					{id}
+					variant="field"
+					label="Choose a region"
+					selected={labelledRegion}
+					options={regionOptions}
+					onchange={(value) => (labelledRegion = value)}
+				/>
+			{/snippet}
+		</Field>
+	</div>
+</Demo>
+
+<Demo
+	title="Textarea"
+	description="Multi-line counterpart to TextInput: same border, focus and Field wiring; vertical resize only."
+	code={'<Textarea rows={4} value={notes} onchange={(v) => (notes = v)} />'}
+>
+	<div class="stack">
+		<Field label="Notes" hint="Anything worth remembering about this site.">
+			{#snippet children({ id, describedBy })}
+				<Textarea
+					{id}
+					aria-describedby={describedBy}
+					rows={4}
+					placeholder="e.g. Access via the rear gate"
+					value={notesValue}
+					onchange={(value) => (notesValue = value)}
+				/>
+			{/snippet}
+		</Field>
+	</div>
+</Demo>
+
+<Demo
+	title="Date field"
+	description="Native type='date' control: YYYY-MM-DD strings in and out, no Date objects, platform picker. A styled calendar variant is future work."
+	code={'<DateField value="2026-06-30" onchange={(v) => (date = v)} />'}
+>
+	<div class="stack">
+		<Field label="Reading date">
+			{#snippet children({ id, describedBy })}
+				<DateField
+					{id}
+					aria-describedby={describedBy}
+					value={readingDate}
+					onchange={(value) => (readingDate = value)}
+				/>
+			{/snippet}
+		</Field>
+		<span class="hint">Value: <code>{readingDate || '—'}</code></span>
+	</div>
+</Demo>
+
+<Demo
+	title="Currency input"
+	description="Symbol adornment, mono right-aligned text, parse-on-blur normalisation ('$1,234.5' → '1234.50'). Submits its raw text — servers re-parse with the same parseCurrency; oninput streams the parsed value for live previews. Unparseable text sets aria-invalid on blur."
+	code={currencyCode}
+>
+	<div class="stack">
+		<Field label="Amount" hint="Excluding GST.">
+			{#snippet children({ id, describedBy })}
+				<CurrencyInput
+					{id}
+					aria-describedby={describedBy}
+					name="amount"
+					value="1234.50"
+					oninput={(parsed) => (amountParsed = parsed)}
+				/>
+			{/snippet}
+		</Field>
+		<span class="hint">Parsed: <code>{amountParsed ?? 'null'}</code></span>
+	</div>
+</Demo>
+
+<Demo
 	title="Chip group"
 	description="Pill multi-select toggles. minSelected blocks deselecting past a floor (here 1); per-option colours tint the selected state."
 	code={chipCode}
@@ -331,6 +425,12 @@
 		gap: var(--su-space-3, 0.75rem);
 		width: 100%;
 		max-width: 360px;
+	}
+
+	.stack :global(.su-textarea),
+	.stack :global(.su-date-field),
+	.stack :global(.su-currency-input) {
+		width: 100%;
 	}
 
 	.hint {

@@ -5,7 +5,9 @@
 		Button,
 		EmptyState,
 		PullToRefresh,
-		Spinner
+		Spinner,
+		Toaster,
+		createToastStore
 	} from '@chienleng/stratum-ui/ui';
 	import Calendar from '@chienleng/stratum-ui/icons/Calendar.svelte';
 	import CircleHelp from '@chienleng/stratum-ui/icons/CircleHelp.svelte';
@@ -32,6 +34,10 @@
 	let refreshCount = $state(0);
 	const pullCode =
 		'<PullToRefresh onrefresh={async () => await invalidateAll()}>\n\t<!-- scrollable content -->\n</PullToRefresh>';
+
+	const toasts = createToastStore();
+	const toastCode =
+		"// toasts.ts — one store per app\nexport const toasts = createToastStore();\n\n<!-- +layout.svelte -->\n<Toaster {toasts} />\n\n// anywhere\ntoasts.success('Invoice saved');";
 </script>
 
 <svelte:head>
@@ -39,6 +45,30 @@
 </svelte:head>
 
 <h1>Feedback</h1>
+
+<Demo
+	title="Toasts"
+	description="createToastStore() + a <Toaster> region mounted once per app. The live region is permanently rendered (screen readers only announce insertions into a region they already know about); toasts are non-interactive with a labelled dismiss button, auto-dismiss pauses on hover/focus, and the fly transition collapses under prefers-reduced-motion."
+	code={toastCode}
+>
+	<div class="row">
+		<Button size="sm" onclick={() => toasts.success('Invoice saved')}>Success</Button>
+		<Button size="sm" onclick={() => toasts.danger('Send failed — try again')}>Danger</Button>
+		<Button size="sm" onclick={() => toasts.warning('Nearing your plan limit')}>Warning</Button>
+		<Button size="sm" onclick={() => toasts.info('Reconnecting…')}>Info</Button>
+		<Button size="sm" variant="outline" onclick={() => toasts.show('Copied to clipboard')}>
+			Neutral
+		</Button>
+		<Button
+			size="sm"
+			variant="outline"
+			onclick={() => toasts.show('Sticks around until dismissed', { duration: 0 })}
+		>
+			Persistent
+		</Button>
+	</div>
+	<Toaster {toasts} />
+</Demo>
 
 <Demo title="Badge" description="Status pills; five semantic variants." code={badgeCode}>
 	<div class="row">
