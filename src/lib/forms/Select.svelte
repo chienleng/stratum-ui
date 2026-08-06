@@ -32,6 +32,10 @@
 		options?: SelectOption[];
 		/** Placeholder/label shown when nothing is selected (static mode: list heading). */
 		label?: string;
+		/** Id for the dropdown trigger, so an external `<label for>` — e.g. a
+		 *  surrounding `Field` — resolves to it. Not applied in `staticDisplay`
+		 *  mode, which has no single labelable control. */
+		id?: string;
 		/** Renders a hidden input so the selection submits with a form. */
 		name?: string;
 		variant?: SelectVariant;
@@ -47,6 +51,7 @@
 		selected = undefined,
 		options = [],
 		label = '',
+		id = undefined,
 		name = '',
 		variant = 'inline',
 		staticDisplay = false,
@@ -122,7 +127,7 @@
 		</ul>
 	{:else}
 		<Select.Root type="single" {items} bind:value={getValue, setValue}>
-			<Select.Trigger>
+			<Select.Trigger {id}>
 				{#snippet child({ props })}
 					<button {...props} type="button" class="trigger">
 						<span class="value">{displayLabel}</span>
