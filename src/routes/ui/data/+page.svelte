@@ -38,18 +38,21 @@
 		'<PageHeader title="Device" subtitle="…" backHref="/devices">\n\t{#snippet actions()}<Button size="sm">Edit</Button>{/snippet}\n</PageHeader>';
 
 	const facilities = [
-		{ name: 'Bayswater', region: 'NSW', tech: 'Coal', mw: 2640 },
-		{ name: 'Hornsdale', region: 'SA', tech: 'Wind', mw: 315 },
-		{ name: 'Coopers Gap', region: 'QLD', tech: 'Wind', mw: 453 },
-		{ name: 'Limondale', region: 'NSW', tech: 'Solar', mw: 249 }
+		{ name: 'Bayswater', region: 'NSW', tech: 'Coal', mw: 2640, commissioned: '12 Mar 1985' },
+		{ name: 'Hornsdale', region: 'SA', tech: 'Wind', mw: 315, commissioned: '28 Jun 2017' },
+		{ name: 'Coopers Gap', region: 'QLD', tech: 'Wind', mw: 453, commissioned: '9 Aug 2019' },
+		{ name: 'Limondale', region: 'NSW', tech: 'Solar', mw: 249, commissioned: '17 Feb 2020' }
 	];
 
 	let currentPage = $state(3);
+	let cardPage = $state(1);
 
 	const tableCode =
 		"<Table headers={['Facility', 'Region']}>\n\t<tr><td>Bayswater</td><td>NSW</td></tr>\n</Table>";
 	const cellUtilsCode =
 		'<Table caption="Generation facilities" cellUtils\n\theaders={[\'Facility\', { label: \'Actions\', srOnly: true }]}>\n\t<tr>\n\t\t<td><a class="row-link" href="…">Bayswater</a></td>\n\t\t<td class="row-actions"><a href="…">Edit</a></td>\n\t</tr>\n</Table>';
+	const cardTableCode =
+		'<Table variant="card" caption="Generation facilities" cellUtils\n\theaders={[\'Facility\', \'Commissioned\', { label: \'Capacity (MW)\', class: \'num\' }, { label: \'Actions\', srOnly: true }]}>\n\t<tr>\n\t\t<td><a class="row-link" href="…">Bayswater</a></td>\n\t\t<td class="muted date-cell">12 Mar 1985</td>\n\t\t<td class="num mono">2,640</td>\n\t\t<td class="row-actions"><a href="…">Edit</a></td>\n\t</tr>\n</Table>\n<Pagination page={1} totalPages={4} totalCount={64} limit={20} … />';
 </script>
 
 <svelte:head>
@@ -99,6 +102,42 @@
 			</tr>
 		{/each}
 	</Table>
+</Demo>
+
+<Demo
+	title="Card table — the full list-page recipe"
+	description="variant='card' wraps the table in a bordered, rounded surface and pads consumer cells to align with the header — the finished look for standalone list pages, and essential on themes whose page background matches --su-surface-muted (the plain shell's header and hover tints would otherwise disappear into the page). Composed here with caption, cellUtils, an sr-only actions column and Pagination."
+	code={cardTableCode}
+>
+	<Table
+		variant="card"
+		caption="Generation facilities"
+		cellUtils
+		headers={[
+			'Facility',
+			'Commissioned',
+			{ label: 'Capacity (MW)', class: 'num' },
+			{ label: 'Actions', srOnly: true }
+		]}
+	>
+		{#each facilities as facility (facility.name)}
+			<tr>
+				<td><a class="row-link" href="#top">{facility.name}</a></td>
+				<td class="muted date-cell">{facility.commissioned}</td>
+				<td class="num mono">{facility.mw.toLocaleString('en-AU')}</td>
+				<td class="row-actions"><a href="#top">Edit</a></td>
+			</tr>
+		{/each}
+	</Table>
+	<div class="card-table-pagination">
+		<Pagination
+			page={cardPage}
+			totalPages={4}
+			totalCount={64}
+			limit={20}
+			onpagechange={(page) => (cardPage = page)}
+		/>
+	</div>
 </Demo>
 
 <Demo title="Compact table" description="Tighter header padding for dense admin lists.">
@@ -271,5 +310,9 @@
 	:global(.su-table th.num) {
 		text-align: right;
 		font-family: var(--su-font-mono, monospace);
+	}
+
+	.card-table-pagination {
+		margin-top: var(--su-space-3, 0.75rem);
 	}
 </style>

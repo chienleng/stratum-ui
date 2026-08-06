@@ -166,6 +166,35 @@ describe('Table', () => {
 		expect(on.body).toContain('data-cell-utils');
 		expect(off.body).not.toContain('data-cell-utils');
 	});
+
+	it('marks the wrapper for the card variant and defaults to plain', () => {
+		const card = render(Table, { props: { headers: ['A'], variant: 'card' } });
+		const plain = render(Table, { props: { headers: ['A'] } });
+		expect(card.body).toContain('data-variant="card"');
+		expect(plain.body).not.toContain('data-variant');
+	});
+
+	it('composes card + compact + cellUtils + caption + srOnly headers', () => {
+		const rows = createRawSnippet(() => ({
+			render: () => '<tr><td class="mono">INV-0001</td><td class="row-actions">Edit</td></tr>'
+		}));
+		const { body } = render(Table, {
+			props: {
+				variant: 'card',
+				compact: true,
+				cellUtils: true,
+				caption: 'Invoices',
+				headers: ['Invoice', { label: 'Actions', srOnly: true }],
+				children: rows
+			}
+		});
+		expect(body).toContain('data-variant="card"');
+		expect(body).toContain('data-compact');
+		expect(body).toContain('data-cell-utils');
+		expect(body).toContain('Invoices');
+		expect(body).toMatch(/<span class="visually-hidden[^"]*">Actions<\/span>/);
+		expect(body).toContain('INV-0001');
+	});
 });
 
 describe('Select', () => {

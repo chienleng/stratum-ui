@@ -6,6 +6,16 @@
 		 *  on otherwise-empty columns (e.g. row actions). */
 		srOnly?: boolean;
 	}
+
+	/**
+	 * `plain` is the bare shell (no surface, cells never styled). `card`
+	 * renders the table as a bordered, rounded surface AND pads consumer
+	 * `td`s to align with the header row — the finished look most list pages
+	 * want, especially on themes whose page background matches
+	 * --su-surface-muted (where the plain shell's header/hover tints
+	 * disappear).
+	 */
+	export type TableVariant = 'plain' | 'card';
 </script>
 
 <script lang="ts">
@@ -13,15 +23,17 @@
 	 * Styled table shell: scroll container, table typography, header row and
 	 * row borders/hover. The consumer renders raw <tr>/<td> rows via
 	 * `children` and owns all cell markup — this component never styles `td`
-	 * unless `cellUtils` opts in to the documented utility class set (num,
-	 * mono, muted, date-cell, row-link, row-actions), which is styled via
-	 * `:global` scoped under this wrapper only.
+	 * unless opted in: `cellUtils` styles the documented utility class set
+	 * (num, mono, muted, date-cell, row-link, row-actions), and
+	 * `variant="card"` pads cells to align with the header. Both are styled
+	 * via `:global` scoped under this wrapper only.
 	 */
 	import type { Snippet } from 'svelte';
 
 	interface Props {
 		headers?: (string | TableHeader)[];
 		compact?: boolean;
+		variant?: TableVariant;
 		/** Accessible table name, rendered as a visually-hidden <caption>.
 		 *  Recommended whenever a page holds more than one table. */
 		caption?: string;
@@ -37,6 +49,7 @@
 	let {
 		headers = [],
 		compact = false,
+		variant = 'plain',
 		caption = '',
 		cellUtils = false,
 		children,
@@ -46,7 +59,11 @@
 	let resolvedHeaders = $derived(headers.map((h) => (typeof h === 'string' ? { label: h } : h)));
 </script>
 
-<div class="su-table-wrap {className}" data-cell-utils={cellUtils || undefined}>
+<div
+	class="su-table-wrap {className}"
+	data-variant={variant === 'card' ? 'card' : undefined}
+	data-cell-utils={cellUtils || undefined}
+>
 	<table class="su-table" data-compact={compact || undefined}>
 		{#if caption}
 			<caption class="visually-hidden">{caption}</caption>
@@ -110,6 +127,25 @@
 
 	.su-table tbody :global(tr:hover) {
 		background-color: var(--su-surface-muted, #f8f9fa);
+	}
+
+	/* ── card variant ─────────────────────────────────────────────────────
+	   A bordered, rounded surface; the wrap is a scroll container
+	   (overflow-x: auto), so the radius clips its content. Consumer cells
+	   are padded to align with the header — the one case besides cellUtils
+	   where this component touches `td`. */
+	.su-table-wrap[data-variant='card'] {
+		background-color: var(--su-surface, #ffffff);
+		border: 1px solid var(--su-border, #e9ecef);
+		border-radius: var(--su-radius-lg, 10px);
+	}
+
+	.su-table-wrap[data-variant='card'] .su-table :global(td) {
+		padding: var(--su-space-3, 0.75rem) var(--su-space-6, 1.5rem);
+	}
+
+	.su-table-wrap[data-variant='card'] .su-table[data-compact] :global(td) {
+		padding: var(--su-space-2, 0.5rem) var(--su-space-4, 1rem);
 	}
 
 	.visually-hidden {

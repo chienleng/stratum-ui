@@ -20,7 +20,7 @@ export { default as SectionLabel, type SectionLabelTag } from './SectionLabel.sv
 export { default as Sheet } from './Sheet.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
 export { default as Spinner, type SpinnerSize } from './Spinner.svelte';
-export { default as Table, type TableHeader } from './Table.svelte';
+export { default as Table, type TableHeader, type TableVariant } from './Table.svelte';
 export { default as Switch, type SwitchButton } from './Switch.svelte';
 export { default as SwitchTabs, type SwitchTabButton } from './SwitchTabs.svelte';
 export { default as SwitchWithIcons, type SwitchIconButton } from './SwitchWithIcons.svelte';
