@@ -95,6 +95,14 @@ describe('Modal', () => {
 		expect(body).toContain('class="footer');
 		expect(body).toContain('Confirm');
 	});
+
+	it('leaves the title heading id-less outside an Overlay (no dialog-label context)', () => {
+		const { body } = render(Modal, {
+			props: { title: 'Standalone', children: text('Body') }
+		});
+		expect(body).toContain('Standalone');
+		expect(body).not.toMatch(/<h2[^>]*\sid=/);
+	});
 });
 
 describe('Pagination', () => {
@@ -132,6 +140,27 @@ describe('Table', () => {
 		const { body } = render(Table, { props: { headers: ['A'], compact: true } });
 		expect(body).toContain('data-compact');
 	});
+
+	it('renders a visually-hidden caption', () => {
+		const { body } = render(Table, { props: { headers: ['A'], caption: 'Invoice lines' } });
+		expect(body).toContain('<caption');
+		expect(body).toContain('Invoice lines');
+		expect(body).toContain('visually-hidden');
+	});
+
+	it('visually hides srOnly header labels while keeping the th named', () => {
+		const { body } = render(Table, {
+			props: { headers: ['Client', { label: 'Actions', srOnly: true }] }
+		});
+		expect(body).toMatch(/<span class="visually-hidden[^"]*">Actions<\/span>/);
+	});
+
+	it('marks the wrapper only when cellUtils opts in', () => {
+		const on = render(Table, { props: { headers: ['A'], cellUtils: true } });
+		const off = render(Table, { props: { headers: ['A'] } });
+		expect(on.body).toContain('data-cell-utils');
+		expect(off.body).not.toContain('data-cell-utils');
+	});
 });
 
 describe('Select', () => {
@@ -153,6 +182,13 @@ describe('Select', () => {
 			props: { variant: 'field', options: [{ label: 'A', value: 'a' }] }
 		});
 		expect(body).toContain('data-variant="field"');
+	});
+
+	it('puts a provided id on the dropdown trigger for external labels', () => {
+		const { body } = render(Select, {
+			props: { id: 'client-select', options: [{ label: 'A', value: 'a' }] }
+		});
+		expect(body).toContain('id="client-select"');
 	});
 });
 
