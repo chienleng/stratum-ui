@@ -17,6 +17,8 @@ export {
 export {
 	getNumberFormat,
 	formatValue,
+	parseCurrency,
+	type ParseCurrencyOptions,
 	getFormattedDateTime,
 	getFormattedTime,
 	getFormattedMonth,
