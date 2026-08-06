@@ -6,10 +6,18 @@
 	 * trap, Escape handling and scroll lock. Spinning up a second Dialog.Root
 	 * here would nest two dialogs (competing focus traps, doubled aria-modal)
 	 * when composed.
+	 *
+	 * When composed inside <Overlay>, the `title` heading's id is published
+	 * through the dialog-label context so the dialog gets an accessible name
+	 * (bits-ui's Dialog.Title can't be used — it requires a Dialog root, and
+	 * this panel must keep rendering standalone). Outside an Overlay the
+	 * context is absent and nothing changes.
 	 */
 	import { fade } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
 	import X from '../icons/X.svelte';
+	import getSeqId from '../utils/html-id-gen.js';
+	import { getDialogLabel } from './dialog-label.svelte.js';
 
 	interface Props {
 		/** Maximum panel width (any CSS length) */
@@ -32,13 +40,24 @@
 		buttons,
 		class: className = ''
 	}: Props = $props();
+
+	const labelCtx = getDialogLabel();
+	const titleId = getSeqId();
+
+	$effect(() => {
+		if (!labelCtx) return;
+		labelCtx.id = title ? titleId : undefined;
+		return () => {
+			labelCtx.id = undefined;
+		};
+	});
 </script>
 
 <div transition:fade={{ duration: 200 }} class="su-modal {className}" style:max-width={maxWidth}>
 	{#if title || onclose}
 		<div class="header">
 			{#if title}
-				<h2 class="title">{title}</h2>
+				<h2 class="title" id={labelCtx && title ? titleId : undefined}>{title}</h2>
 			{/if}
 			{#if onclose}
 				<button type="button" class="close" onclick={onclose} aria-label="Close">

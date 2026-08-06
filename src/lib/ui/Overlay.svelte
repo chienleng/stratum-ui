@@ -5,17 +5,28 @@
 	 * focus trap, Escape-to-close, body scroll locking and press-outside-to-
 	 * close come from bits-ui. Presence is owned by the consumer: close
 	 * interactions only call `onclose`; the overlay stays until unmounted.
+	 *
+	 * Accessible name: a composed <Modal> with a `title` publishes its heading
+	 * id via the dialog-label context, which is written to `aria-labelledby`
+	 * AFTER the bits-ui prop spread (overriding the Dialog.Title id bits-ui
+	 * emits, which never resolves here — no Dialog.Title is rendered). For
+	 * custom panels without a Modal title, pass `label` instead.
 	 */
 	import { Dialog } from 'bits-ui';
 	import { fade } from 'svelte/transition';
 	import type { Snippet } from 'svelte';
+	import { createDialogLabel } from './dialog-label.svelte.js';
 
 	interface Props {
 		children?: Snippet;
 		onclose?: () => void;
+		/** Fallback accessible name when no composed <Modal title> provides one. */
+		label?: string;
 	}
 
-	let { children, onclose }: Props = $props();
+	let { children, onclose, label = undefined }: Props = $props();
+
+	const labelCtx = createDialogLabel();
 
 	// The dialog reads as open for as long as the component is mounted; a close
 	// request from bits-ui (Escape, backdrop press) is only reported upward.
@@ -40,7 +51,16 @@
 		<Dialog.Content forceMount>
 			{#snippet child({ props, open })}
 				{#if open}
-					<div {...props} class="su-overlay" transition:fade={{ duration: 25 }}>
+					<!-- aria attributes intentionally follow the spread: they replace the
+					     dangling aria-labelledby bits-ui points at its unrendered
+					     Dialog.Title (undefined removes it outright). -->
+					<div
+						{...props}
+						aria-labelledby={labelCtx.id}
+						aria-label={!labelCtx.id ? label : undefined}
+						class="su-overlay"
+						transition:fade={{ duration: 25 }}
+					>
 						<!-- Pressing the empty centring area (not the panel) closes, standing
 						     in for the original's backdrop click. Escape provides the
 						     keyboard equivalent via bits-ui. -->
