@@ -3,6 +3,17 @@ import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
+	server: {
+		// stratum-ui.localhost, not localhost: cookies are port-blind, so every
+		// project served on plain localhost shares one cookie jar and the
+		// stacked sessions eventually overflow Node's 16 KB header limit (431).
+		// A *.localhost name resolves to loopback (RFC 6761) but is its own
+		// cookie origin. The port is pinned (7604 in this machine's per-project
+		// block) so the demo-site bookmark never chases an auto-incremented port.
+		host: 'stratum-ui.localhost',
+		port: 7604,
+		strictPort: true
+	},
 	plugins: [
 		sveltekit({
 			compilerOptions: {
