@@ -4,9 +4,6 @@
  * Fully self-contained: copy this whole file into any project, or
  * `import '@chienleng/stratum-ui/themes/neutral.css'`.
  *
- * Custom-property declarations only — no element rules, no resets, so this
- * file can never leak styles into a consuming app.
- *
  * The `:where(:root)` arm has zero specificity: importing a single theme
  * applies it globally with nothing else required. When several theme files
  * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
@@ -14,10 +11,39 @@
  *
  * This theme uses system font stacks only — nothing to install.
  *
- * `data-mode` is reserved for a future dark mode; this theme is light-only.
+ * ── Light and dark ──────────────────────────────────────────────────────
+ *
+ * `data-mode` on the root element selects the colour scheme:
+ *
+ *   absent   follow the operating system (the default)
+ *   'light'  force light, even if the OS is dark
+ *   'dark'   force dark, even if the OS is light
+ *
+ * Every colour token is declared once, as `light-dark(light, dark)`. There is
+ * no second block to keep in step, so a token cannot be left behind at its
+ * light value — a unit test asserts every colour token uses the function.
+ *
+ * `color-scheme` is the one non-custom-property declaration in this file, and
+ * the only exception to the "declarations only, so it can never leak styles"
+ * rule the other theme files state. It has to be here: `light-dark()` reads
+ * it, and without it the native furniture — scrollbars, form controls, the
+ * canvas behind the page — stays light while everything else goes dark. It is
+ * set on the same selectors as the tokens, so it travels with the theme.
+ *
+ * Because the mode rules set nothing but `color-scheme`, and all themes agree
+ * on those three values, loading several theme files together cannot produce a
+ * mismatched mode. Only the token block is theme-specific.
+ *
+ * Dark is not an inversion of the light ramp. The numbered status and data
+ * ramps encode *roles*, not lightness — 50/100 is the tinted background, 200
+ * the border, 500/600 the solid fill, 700/800 the strong text sitting on that
+ * tint. Preserving the role means 50 becomes the darkest step in dark mode and
+ * 800 the lightest, which is the opposite of a mechanical flip.
  */
 :where(:root),
 [data-theme='neutral'] {
+	color-scheme: light dark;
+
 	/* ── primitives (neutral grey ramp — not part of the themed API) ──── */
 	--su-gray-50: #f8f9fa;
 	--su-gray-100: #f1f3f5;
@@ -29,6 +55,13 @@
 	--su-gray-700: #495057;
 	--su-gray-800: #1f2328;
 	--su-gray-900: #16191d;
+
+	/* Extra steps below 900 that only the dark layer uses: a canvas darker
+	   than the raised surface, and two rungs of separation above it. */
+	--su-gray-950: #0e1114;
+	--su-gray-880: #1c2027;
+	--su-gray-820: #262c34;
+	--su-gray-760: #333a44;
 
 	/* ── typography ───────────────────────────────────────────────────── */
 	--su-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -78,10 +111,17 @@
 	--su-radius-xl: 16px;
 	--su-radius-full: 9999px;
 
-	/* ── shadows ──────────────────────────────────────────────────────── */
-	--su-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	--su-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-	--su-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+	/* ── shadows ──────────────────────────────────────────────────────────
+	   Dark needs far more opacity than light: a 5%-black shadow is invisible
+	   against a near-black canvas, so elevation is carried by a deeper,
+	   tighter shadow rather than the same value reused. */
+	--su-shadow-sm: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.55));
+	--su-shadow-md:
+		0 4px 6px -1px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.6)),
+		0 2px 4px -2px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.5));
+	--su-shadow-lg:
+		0 10px 15px -3px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.65)),
+		0 4px 6px -4px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.55));
 
 	/* ── z-scale ──────────────────────────────────────────────────────── */
 	--su-z-dropdown: 1150;
@@ -97,93 +137,115 @@
 
 	/* ── focus ────────────────────────────────────────────────────────── */
 	--su-focus-ring-width: 3px;
-	--su-focus-ring: rgb(24 24 27 / 0.35);
+	--su-focus-ring: light-dark(rgb(24 24 27 / 0.35), rgb(233 236 239 / 0.5));
 
-	/* ── semantic colours ─────────────────────────────────────────────── */
-	--su-surface: #ffffff;
-	--su-surface-muted: var(--su-gray-50);
-	--su-surface-strong: var(--su-gray-100);
-	--su-surface-emphasis: var(--su-gray-200);
-	--su-surface-inverse: var(--su-gray-900);
+	/* ── semantic colours ─────────────────────────────────────────────────
+	   `surface-muted` is the recessed ground: lighter than `surface` in light,
+	   darker than it in dark. The role is "set back from the card", not a
+	   direction on the ramp. */
+	--su-surface: light-dark(#ffffff, var(--su-gray-900));
+	--su-surface-muted: light-dark(var(--su-gray-50), var(--su-gray-950));
+	--su-surface-strong: light-dark(var(--su-gray-100), var(--su-gray-880));
+	--su-surface-emphasis: light-dark(var(--su-gray-200), var(--su-gray-820));
+	--su-surface-inverse: light-dark(var(--su-gray-900), var(--su-gray-50));
 
-	--su-text: var(--su-gray-800);
-	--su-text-secondary: var(--su-gray-700);
-	--su-text-muted: var(--su-gray-600);
-	--su-text-subtle: var(--su-gray-400);
-	--su-text-faint: var(--su-gray-300);
-	--su-text-inverse: #ffffff;
+	--su-text: light-dark(var(--su-gray-800), var(--su-gray-200));
+	--su-text-secondary: light-dark(var(--su-gray-700), var(--su-gray-300));
+	--su-text-muted: light-dark(var(--su-gray-600), var(--su-gray-400));
+	--su-text-subtle: light-dark(var(--su-gray-400), var(--su-gray-500));
+	--su-text-faint: light-dark(var(--su-gray-300), var(--su-gray-600));
+	--su-text-inverse: light-dark(#ffffff, var(--su-gray-900));
 
-	--su-accent: #18181b;
-	--su-accent-hover: #3f3f46;
-	--su-accent-contrast: #ffffff;
+	/* The primary action is the highest-contrast thing on the page: near-black
+	   on light, near-white on dark. Flipping it keeps that intent — a
+	   near-black button would disappear into a dark canvas. */
+	--su-accent: light-dark(#18181b, var(--su-gray-50));
+	--su-accent-hover: light-dark(#3f3f46, var(--su-gray-200));
+	--su-accent-contrast: light-dark(#ffffff, var(--su-gray-900));
 
-	--su-border: var(--su-gray-200);
-	--su-border-muted: var(--su-gray-100);
-	--su-border-strong: var(--su-gray-300);
-	--su-border-emphasis: var(--su-gray-500);
+	--su-border: light-dark(var(--su-gray-200), var(--su-gray-760));
+	--su-border-muted: light-dark(var(--su-gray-100), var(--su-gray-820));
+	--su-border-strong: light-dark(var(--su-gray-300), var(--su-gray-700));
+	--su-border-emphasis: light-dark(var(--su-gray-500), var(--su-gray-500));
 
-	--su-danger: #dc2626;
-	--su-success: #16a34a;
-	--su-warning: #d97706;
+	--su-danger: light-dark(#dc2626, #f87171);
+	--su-success: light-dark(#16a34a, #4ade80);
+	--su-warning: light-dark(#d97706, #fbbf24);
 
-	/* Status ramps: backgrounds at the light end, borders in the low
-	   hundreds, text/icons at 500+. The unnumbered tokens above remain the
+	/* Status ramps by role, not lightness — see the header. 50/100 tint the
+	   background, 200 draws the border, 500/600 fill, 700/800 carry the text
+	   that sits on the tint. The unnumbered tokens above remain the
 	   component-API defaults. */
-	--su-danger-50: #fef2f2;
-	--su-danger-200: #fecaca;
-	--su-danger-500: #ef4444;
-	--su-danger-600: #dc2626;
-	--su-danger-800: #991b1b;
+	--su-danger-50: light-dark(#fef2f2, #2b1315);
+	--su-danger-200: light-dark(#fecaca, #61242a);
+	--su-danger-500: light-dark(#ef4444, #f87171);
+	--su-danger-600: light-dark(#dc2626, #ef4444);
+	--su-danger-800: light-dark(#991b1b, #fecdd0);
 
-	--su-warning-50: #fffbeb;
-	--su-warning-100: #fef3c7;
-	--su-warning-200: #fde68a;
-	--su-warning-500: #f59e0b;
-	--su-warning-600: #d97706;
-	--su-warning-700: #b45309;
-	--su-warning-800: #92400e;
+	--su-warning-50: light-dark(#fffbeb, #2a1d06);
+	--su-warning-100: light-dark(#fef3c7, #3b2909);
+	--su-warning-200: light-dark(#fde68a, #5d4210);
+	--su-warning-500: light-dark(#f59e0b, #fbbf24);
+	--su-warning-600: light-dark(#d97706, #f59e0b);
+	--su-warning-700: light-dark(#b45309, #fcd34d);
+	--su-warning-800: light-dark(#92400e, #fde68a);
 
-	--su-success-50: #f0fdf4;
-	--su-success-100: #dcfce7;
-	--su-success-500: #22c55e;
-	--su-success-600: #16a34a;
-	--su-success-700: #15803d;
+	--su-success-50: light-dark(#f0fdf4, #0c2318);
+	--su-success-100: light-dark(#dcfce7, #123322);
+	--su-success-500: light-dark(#22c55e, #4ade80);
+	--su-success-600: light-dark(#16a34a, #22c55e);
+	--su-success-700: light-dark(#15803d, #bbf7d0);
 
 	/* Data accent (blue — highlights, selections, focus in data UI).
 	   Distinct from --su-accent, which is the primary-action colour. */
-	--su-data-accent-50: #eff6ff;
-	--su-data-accent-100: #dbeafe;
-	--su-data-accent-300: #93c5fd;
-	--su-data-accent-500: #3b82f6;
-	--su-data-accent-600: #2563eb;
-	--su-data-accent-900: #1e3a8a;
+	--su-data-accent-50: light-dark(#eff6ff, #101d33);
+	--su-data-accent-100: light-dark(#dbeafe, #17294b);
+	--su-data-accent-300: light-dark(#93c5fd, #3f6fb5);
+	--su-data-accent-500: light-dark(#3b82f6, #60a5fa);
+	--su-data-accent-600: light-dark(#2563eb, #3b82f6);
+	--su-data-accent-900: light-dark(#1e3a8a, #dbeafe);
 
-	--su-overlay: rgb(0 0 0 / 0.4);
-	--su-tooltip-bg: var(--su-gray-800);
-	--su-tooltip-text: var(--su-gray-50);
+	--su-overlay: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.65));
+	--su-tooltip-bg: light-dark(var(--su-gray-800), var(--su-gray-200));
+	--su-tooltip-text: light-dark(var(--su-gray-50), var(--su-gray-900));
 
 	/* ── chart tokens ─────────────────────────────────────────────────── */
-	--su-chart-surface: #ffffff;
-	--su-chart-grid: var(--su-gray-200);
-	--su-chart-grid-strong: var(--su-gray-700);
-	--su-chart-axis-text: #8b949e;
+	--su-chart-surface: light-dark(#ffffff, var(--su-gray-900));
+	--su-chart-grid: light-dark(var(--su-gray-200), var(--su-gray-760));
+	--su-chart-grid-strong: light-dark(var(--su-gray-700), var(--su-gray-500));
+	--su-chart-axis-text: light-dark(#8b949e, var(--su-gray-400));
 	--su-chart-axis-font-size: var(--su-font-size-2xs);
-	--su-chart-tick: var(--su-gray-700);
-	--su-chart-focus: #18181b;
-	--su-chart-brush-handle: var(--su-gray-700);
-	--su-chart-brush-selection: rgb(0 0 0 / 0.06);
-	--su-chart-annotation: var(--su-gray-600);
+	--su-chart-tick: light-dark(var(--su-gray-700), var(--su-gray-400));
+	--su-chart-focus: light-dark(#18181b, var(--su-gray-50));
+	--su-chart-brush-handle: light-dark(var(--su-gray-700), var(--su-gray-400));
+	--su-chart-brush-selection: light-dark(rgb(0 0 0 / 0.06), rgb(255 255 255 / 0.1));
+	--su-chart-annotation: light-dark(var(--su-gray-600), var(--su-gray-300));
 
-	--su-chart-series-1: #4e79a7;
-	--su-chart-series-2: #f28e2b;
-	--su-chart-series-3: #e15759;
-	--su-chart-series-4: #76b7b2;
-	--su-chart-series-5: #59a14f;
-	--su-chart-series-6: #edc948;
-	--su-chart-series-7: #b07aa1;
-	--su-chart-series-8: #ff9da7;
-	--su-chart-series-9: #9c755f;
-	--su-chart-series-10: #bab0ac;
-	--su-chart-series-11: #86bcb6;
-	--su-chart-series-12: #d37295;
+	/* Tableau 10 in light. The dark set lifts each hue toward the light end
+	   rather than reusing it: the mid-tones that read well on white lose
+	   separation against a near-black ground. */
+	--su-chart-series-1: light-dark(#4e79a7, #7aa6d2);
+	--su-chart-series-2: light-dark(#f28e2b, #f4a259);
+	--su-chart-series-3: light-dark(#e15759, #ef7d7f);
+	--su-chart-series-4: light-dark(#76b7b2, #8fd0cb);
+	--su-chart-series-5: light-dark(#59a14f, #85c97b);
+	--su-chart-series-6: light-dark(#edc948, #f0d264);
+	--su-chart-series-7: light-dark(#b07aa1, #cba0bf);
+	--su-chart-series-8: light-dark(#ff9da7, #ffb3bb);
+	--su-chart-series-9: light-dark(#9c755f, #bd9a85);
+	--su-chart-series-10: light-dark(#bab0ac, #cfc6c2);
+	--su-chart-series-11: light-dark(#86bcb6, #a3d3ce);
+	--su-chart-series-12: light-dark(#d37295, #e295b0);
+}
+
+/* Forcing a mode. These set `color-scheme` and nothing else, so they are
+   theme-independent and safe to have several copies of on the page. */
+:where(:root)[data-mode='light'],
+[data-theme='neutral'][data-mode='light'] {
+	color-scheme: light;
+}
+
+:where(:root)[data-mode='dark'],
+[data-theme='neutral'][data-mode='dark'] {
+	color-scheme: dark;
 }

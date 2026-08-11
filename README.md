@@ -58,10 +58,50 @@ Each file declares tokens under `:where(:root), [data-theme='<name>']`:
   `document.documentElement.dataset.theme = 'neutral'` — the attribute arm
   always wins.
 - **Copy-paste:** each file is self-contained (custom-property declarations
-  only, no resets) — paste one into any project and edit values freely.
+  plus one `color-scheme`, no resets) — paste one into any project and edit
+  values freely.
 - **Brand overrides:** consuming apps can re-theme by declaring a
   higher-specificity override sheet (e.g. `:root[data-brand='x'] { --su-accent: … }`)
   that redefines only the diverging tokens — no fork or extra theme file needed.
+
+### Light and dark
+
+Since 0.12.0 every theme ships both modes. `data-mode` on the root element
+selects which:
+
+| `data-mode` | Result                            |
+| ----------- | --------------------------------- |
+| _absent_    | follow the operating system       |
+| `'light'`   | force light, whatever the OS says |
+| `'dark'`    | force dark, whatever the OS says  |
+
+```js
+document.documentElement.dataset.mode = 'dark'; // force
+delete document.documentElement.dataset.mode; // back to following the OS
+```
+
+Note that "follow the system" is the _absence_ of the attribute, not a third
+value — that is what lets the OS preference reach `light-dark()`.
+
+Every colour token is declared once, as `light-dark(light, dark)`, so there is
+no parallel block to keep in step and no token can be left behind at its light
+value; a unit test asserts this for all three themes. `color-scheme` is the one
+non-custom-property declaration in a theme file. It has to be there: it is what
+`light-dark()` reads, and without it the native furniture — scrollbars, form
+controls, the canvas behind the page — stays light while everything else goes
+dark.
+
+Dark is not a mechanical inversion. The numbered status and data ramps encode
+roles rather than lightness — 50/100 is the tinted background, 200 the border,
+500/600 the solid fill, 700/800 the strong text on that tint — so preserving
+the role makes 50 the _darkest_ step in dark mode and 800 the lightest. Theme 1
+also lifts the OE red for dark (#c74523 scores only 2.4:1 on the dark ground)
+and flips `--su-accent-contrast` to dark text, because white on the lifted red
+does not clear AA.
+
+Contrast is asserted, not eyeballed: the suite resolves every token in both
+modes and holds text pairings to WCAG AA, with a further rule that dark may
+never score worse than light for the softer roles.
 
 Since 0.8.0 the semantic set also covers app-chrome needs beyond the component
 API: extra neutral steps (`--su-surface-emphasis`, `--su-text-secondary`,

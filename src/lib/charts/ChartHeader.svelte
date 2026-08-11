@@ -254,8 +254,11 @@
 		color: var(--su-text-inverse, #ffffff);
 	}
 
+	/* Hover pushes the inverse chip one step further from the page, which means
+	   further towards black in light and towards white in dark. A literal
+	   #000 here would pair a black chip with dark text once the theme flips. */
 	.pan-zoom-toggle[aria-pressed='true']:hover {
-		background-color: #000000;
+		background-color: light-dark(#000000, #ffffff);
 		color: var(--su-text-inverse, #ffffff);
 	}
 

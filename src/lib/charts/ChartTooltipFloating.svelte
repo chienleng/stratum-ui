@@ -318,12 +318,13 @@
 		color: var(--su-text, #1f2328);
 	}
 
-	/* No pure-black token exists; the hovered emphasis keeps the source's
-	   text-black as a literal alongside the weight bump. */
+	/* No token sits beyond --su-text, so the hovered emphasis states its two
+	   ends literally: past-black in light, past-white in dark. As a flat #000
+	   it vanished into the tooltip's own surface once the theme flipped. */
 	.su-row.su-hovered .su-series-label,
 	.su-row.su-hovered .su-series-value {
 		font-weight: var(--su-font-weight-semibold, 600);
-		color: #000;
+		color: light-dark(#000000, #ffffff);
 	}
 
 	.su-total {

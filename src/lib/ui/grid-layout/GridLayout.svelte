@@ -313,9 +313,11 @@
 			background-color 100ms ease;
 	}
 
+	/* The hover tint has to come from a token, not a wash of black: 4% black
+	   over an already-dark surface is invisible. */
 	.grip:hover {
 		color: var(--su-text-muted, #6a6a6a);
-		background-color: rgb(0 0 0 / 0.04);
+		background-color: var(--su-surface-strong, #f1f3f5);
 	}
 
 	.grip:active {

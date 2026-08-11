@@ -13,12 +13,15 @@
 
 	import Nav from './_showcase/Nav.svelte';
 	import ThemeSwitcher from './_showcase/ThemeSwitcher.svelte';
+	import ModeSwitcher from './_showcase/ModeSwitcher.svelte';
 	import { theme } from './_showcase/theme.svelte.js';
+	import { mode } from './_showcase/mode.svelte.js';
 
 	let { children } = $props();
 
 	$effect(() => {
 		theme.init();
+		mode.init();
 	});
 </script>
 
@@ -28,6 +31,7 @@
 	</aside>
 	<div class="content">
 		<header>
+			<ModeSwitcher />
 			<ThemeSwitcher />
 		</header>
 		<main>
@@ -61,6 +65,8 @@
 		display: flex;
 		justify-content: flex-end;
 		align-items: center;
+		gap: var(--su-space-3);
+		flex-wrap: wrap;
 		padding: var(--su-space-3) var(--su-space-6);
 		border-bottom: 1px solid var(--su-border);
 		background: var(--su-surface);

@@ -6,12 +6,18 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 		<script>
-			// Set the theme before first paint to avoid a flash of the wrong theme.
+			// Set the theme and colour mode before first paint to avoid a flash of
+			// the wrong one. An unset mode is left unset on purpose: absence is how
+			// the themes spell "follow the OS", so stamping a value would override
+			// the very preference the default is meant to honour.
 			(function () {
 				var saved = localStorage.getItem('su-theme');
 				document.documentElement.dataset.theme = ['theme-1', 'theme-2'].includes(saved)
 					? saved
 					: 'neutral';
+
+				var mode = localStorage.getItem('su-mode');
+				if (mode === 'light' || mode === 'dark') document.documentElement.dataset.mode = mode;
 			})();
 		</script>
 		%sveltekit.head%

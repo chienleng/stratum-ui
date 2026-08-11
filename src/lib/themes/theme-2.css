@@ -9,9 +9,6 @@
  * Fully self-contained: copy this whole file into any project, or
  * `import '@chienleng/stratum-ui/themes/theme-2.css'`.
  *
- * Custom-property declarations only — no element rules, no resets, so this
- * file can never leak styles into a consuming app.
- *
  * The `:where(:root)` arm has zero specificity: importing a single theme
  * applies it globally with nothing else required. When several theme files
  * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
@@ -22,10 +19,24 @@
  * and import them once in your root layout. Without them, the stacks below
  * fall back to system fonts.
  *
- * `data-mode` is reserved for a future dark mode; this theme is light-only.
+ * ── Light and dark ──────────────────────────────────────────────────────
+ *
+ * `data-mode` on the root element selects the colour scheme: absent follows
+ * the operating system, `'light'` and `'dark'` force it. Every colour token is
+ * declared once as `light-dark(light, dark)`; `color-scheme` is the single
+ * non-custom-property declaration, and is required both for `light-dark()` to
+ * resolve and for native scrollbars and form controls to follow. See
+ * `neutral.css` for the full rationale.
+ *
+ * The slate ramp already ends dark enough to build on, so dark mode reuses
+ * 900/800 and adds two rungs: a canvas below 900 and a rule between 800 and
+ * 700. The shadows stay deliberately restrained in both modes — this theme
+ * separates surfaces with borders, not elevation.
  */
 :where(:root),
 [data-theme='theme-2'] {
+	color-scheme: light dark;
+
 	/* ── primitives (Furrow slate ramp + accents — not part of the themed API) ── */
 	--su-fw-slate-50: #f8fafc;
 	--su-fw-slate-100: #f1f5f9;
@@ -39,6 +50,14 @@
 	--su-fw-slate-900: #0f172a;
 	--su-fw-blue: #3b82f6;
 	--su-fw-sky: #0ea5e9;
+
+	/* Extra steps the dark layer needs: a canvas below 900, a raised surface
+	   between it and 800, a rule above 800, and a subtle-text step that clears
+	   AA where slate-500 does not. */
+	--su-fw-slate-950: #080d17;
+	--su-fw-slate-850: #172032;
+	--su-fw-slate-750: #2a3648;
+	--su-fw-slate-450: #7c8ba1;
 
 	/* ── typography ───────────────────────────────────────────────────── */
 	/* 'X Variable' covers @fontsource-variable installs; plain 'X' covers
@@ -94,9 +113,13 @@
 	--su-radius-full: 9999px;
 
 	/* ── shadows (deliberately light — no heavy elevation) ───────────── */
-	--su-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	--su-shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-	--su-shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
+	--su-shadow-sm: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.5));
+	--su-shadow-md:
+		0 1px 3px 0 light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.55)),
+		0 1px 2px -1px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.45));
+	--su-shadow-lg:
+		0 4px 6px -1px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.6)),
+		0 2px 4px -2px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.5));
 
 	/* ── z-scale ──────────────────────────────────────────────────────── */
 	--su-z-dropdown: 1150;
@@ -112,93 +135,110 @@
 
 	/* ── focus ────────────────────────────────────────────────────────── */
 	--su-focus-ring-width: 3px;
-	--su-focus-ring: rgb(15 23 42 / 0.35);
+	--su-focus-ring: light-dark(rgb(15 23 42 / 0.35), rgb(96 165 250 / 0.55));
 
 	/* ── semantic colours ─────────────────────────────────────────────── */
-	--su-surface: #ffffff;
-	--su-surface-muted: var(--su-fw-slate-50);
-	--su-surface-strong: var(--su-fw-slate-100);
-	--su-surface-emphasis: var(--su-fw-slate-200);
-	--su-surface-inverse: var(--su-fw-slate-900);
+	--su-surface: light-dark(#ffffff, var(--su-fw-slate-900));
+	--su-surface-muted: light-dark(var(--su-fw-slate-50), var(--su-fw-slate-950));
+	--su-surface-strong: light-dark(var(--su-fw-slate-100), var(--su-fw-slate-850));
+	--su-surface-emphasis: light-dark(var(--su-fw-slate-200), var(--su-fw-slate-800));
+	--su-surface-inverse: light-dark(var(--su-fw-slate-900), var(--su-fw-slate-50));
 
-	--su-text: var(--su-fw-slate-900);
-	--su-text-secondary: var(--su-fw-slate-600);
-	--su-text-muted: var(--su-fw-slate-500);
-	--su-text-subtle: var(--su-fw-slate-400);
-	--su-text-faint: var(--su-fw-slate-300);
-	--su-text-inverse: #ffffff;
+	--su-text: light-dark(var(--su-fw-slate-900), var(--su-fw-slate-100));
+	--su-text-secondary: light-dark(var(--su-fw-slate-600), var(--su-fw-slate-300));
+	--su-text-muted: light-dark(var(--su-fw-slate-500), var(--su-fw-slate-400));
+	--su-text-subtle: light-dark(var(--su-fw-slate-400), var(--su-fw-slate-450));
+	--su-text-faint: light-dark(var(--su-fw-slate-300), var(--su-fw-slate-600));
+	--su-text-inverse: light-dark(#ffffff, var(--su-fw-slate-900));
 
-	--su-accent: var(--su-fw-slate-900);
-	--su-accent-hover: var(--su-fw-slate-800);
-	--su-accent-contrast: #ffffff;
+	/* Furrow's primary action is the darkest slate. In dark that inverts to
+	   the lightest, so the action stays the highest-contrast thing present. */
+	--su-accent: light-dark(var(--su-fw-slate-900), var(--su-fw-slate-50));
+	--su-accent-hover: light-dark(var(--su-fw-slate-800), var(--su-fw-slate-200));
+	--su-accent-contrast: light-dark(#ffffff, var(--su-fw-slate-900));
 
-	--su-border: var(--su-fw-slate-200);
-	--su-border-muted: var(--su-fw-slate-100);
-	--su-border-strong: var(--su-fw-slate-300);
-	--su-border-emphasis: var(--su-fw-slate-500);
+	--su-border: light-dark(var(--su-fw-slate-200), var(--su-fw-slate-750));
+	--su-border-muted: light-dark(var(--su-fw-slate-100), var(--su-fw-slate-800));
+	--su-border-strong: light-dark(var(--su-fw-slate-300), var(--su-fw-slate-700));
+	--su-border-emphasis: light-dark(var(--su-fw-slate-500), var(--su-fw-slate-450));
 
-	--su-danger: #dc2626;
-	--su-success: #16a34a;
-	--su-warning: #d97706;
+	--su-danger: light-dark(#dc2626, #f87171);
+	--su-success: light-dark(#16a34a, #34d399);
+	--su-warning: light-dark(#d97706, #fbbf24);
 
-	/* Status ramps (Tailwind red/amber/emerald steps): backgrounds at the
-	   light end, borders in the low hundreds, text/icons at 500+. The
-	   unnumbered tokens above remain the component-API defaults. */
-	--su-danger-50: #fef2f2;
-	--su-danger-200: #fecaca;
-	--su-danger-500: #ef4444;
-	--su-danger-600: #dc2626;
-	--su-danger-800: #991b1b;
+	/* Status ramps (Tailwind red/amber/emerald steps) by role rather than
+	   lightness: 50/100 tint the background, 200 draws the border, 500/600
+	   fill, 700/800 carry the text on that tint. The unnumbered tokens above
+	   remain the component-API defaults. */
+	--su-danger-50: light-dark(#fef2f2, #2b1315);
+	--su-danger-200: light-dark(#fecaca, #61242a);
+	--su-danger-500: light-dark(#ef4444, #f87171);
+	--su-danger-600: light-dark(#dc2626, #ef4444);
+	--su-danger-800: light-dark(#991b1b, #fecdd0);
 
-	--su-warning-50: #fffbeb;
-	--su-warning-100: #fef3c7;
-	--su-warning-200: #fde68a;
-	--su-warning-500: #f59e0b;
-	--su-warning-600: #d97706;
-	--su-warning-700: #b45309;
-	--su-warning-800: #92400e;
+	--su-warning-50: light-dark(#fffbeb, #2a1d06);
+	--su-warning-100: light-dark(#fef3c7, #3b2909);
+	--su-warning-200: light-dark(#fde68a, #5d4210);
+	--su-warning-500: light-dark(#f59e0b, #fbbf24);
+	--su-warning-600: light-dark(#d97706, #f59e0b);
+	--su-warning-700: light-dark(#b45309, #fcd34d);
+	--su-warning-800: light-dark(#92400e, #fde68a);
 
-	--su-success-50: #ecfdf5;
-	--su-success-100: #d1fae5;
-	--su-success-500: #10b981;
-	--su-success-600: #059669;
-	--su-success-700: #047857;
+	--su-success-50: light-dark(#ecfdf5, #04241a);
+	--su-success-100: light-dark(#d1fae5, #073325);
+	--su-success-500: light-dark(#10b981, #34d399);
+	--su-success-600: light-dark(#059669, #10b981);
+	--su-success-700: light-dark(#047857, #a7f3d0);
 
 	/* Data accent (blue — highlights, selections, focus in data UI).
 	   Distinct from --su-accent, which is the primary-action colour. */
-	--su-data-accent-50: #eff6ff;
-	--su-data-accent-100: #dbeafe;
-	--su-data-accent-300: #93c5fd;
-	--su-data-accent-500: #3b82f6;
-	--su-data-accent-600: #2563eb;
-	--su-data-accent-900: #1e3a8a;
+	--su-data-accent-50: light-dark(#eff6ff, #0d1b30);
+	--su-data-accent-100: light-dark(#dbeafe, #122744);
+	--su-data-accent-300: light-dark(#93c5fd, #3b6fb8);
+	--su-data-accent-500: light-dark(#3b82f6, #60a5fa);
+	--su-data-accent-600: light-dark(#2563eb, #3b82f6);
+	--su-data-accent-900: light-dark(#1e3a8a, #dbeafe);
 
-	--su-overlay: rgb(15 23 42 / 0.4);
-	--su-tooltip-bg: var(--su-fw-slate-900);
-	--su-tooltip-text: var(--su-fw-slate-50);
+	--su-overlay: light-dark(rgb(15 23 42 / 0.4), rgb(2 6 14 / 0.7));
+	--su-tooltip-bg: light-dark(var(--su-fw-slate-900), var(--su-fw-slate-100));
+	--su-tooltip-text: light-dark(var(--su-fw-slate-50), var(--su-fw-slate-900));
 
 	/* ── chart tokens (blue-500 is Furrow's data accent) ─────────────── */
-	--su-chart-surface: #ffffff;
-	--su-chart-grid: var(--su-fw-slate-200);
-	--su-chart-grid-strong: var(--su-fw-slate-700);
-	--su-chart-axis-text: var(--su-fw-slate-400);
+	--su-chart-surface: light-dark(#ffffff, var(--su-fw-slate-900));
+	--su-chart-grid: light-dark(var(--su-fw-slate-200), var(--su-fw-slate-750));
+	--su-chart-grid-strong: light-dark(var(--su-fw-slate-700), var(--su-fw-slate-500));
+	--su-chart-axis-text: light-dark(var(--su-fw-slate-400), var(--su-fw-slate-400));
 	--su-chart-axis-font-size: var(--su-font-size-2xs);
-	--su-chart-tick: var(--su-fw-slate-600);
-	--su-chart-focus: var(--su-fw-blue);
-	--su-chart-brush-handle: var(--su-fw-slate-700);
-	--su-chart-brush-selection: rgb(59 130 246 / 0.15);
-	--su-chart-annotation: var(--su-fw-slate-500);
+	--su-chart-tick: light-dark(var(--su-fw-slate-600), var(--su-fw-slate-400));
+	--su-chart-focus: light-dark(var(--su-fw-blue), #60a5fa);
+	--su-chart-brush-handle: light-dark(var(--su-fw-slate-700), var(--su-fw-slate-400));
+	--su-chart-brush-selection: light-dark(rgb(59 130 246 / 0.15), rgb(96 165 250 / 0.22));
+	--su-chart-annotation: light-dark(var(--su-fw-slate-500), var(--su-fw-slate-300));
 
-	--su-chart-series-1: #3b82f6;
-	--su-chart-series-2: #0ea5e9;
-	--su-chart-series-3: #10b981;
-	--su-chart-series-4: #f59e0b;
-	--su-chart-series-5: #8b5cf6;
-	--su-chart-series-6: #14b8a6;
-	--su-chart-series-7: #f43f5e;
-	--su-chart-series-8: #84cc16;
-	--su-chart-series-9: #6366f1;
-	--su-chart-series-10: #f97316;
-	--su-chart-series-11: #06b6d4;
-	--su-chart-series-12: #a855f7;
+	/* Tailwind 500s in light, 400s in dark — one step lighter is enough here,
+	   because the slate ground is bluer and less absorbing than a true black. */
+	--su-chart-series-1: light-dark(#3b82f6, #60a5fa);
+	--su-chart-series-2: light-dark(#0ea5e9, #38bdf8);
+	--su-chart-series-3: light-dark(#10b981, #34d399);
+	--su-chart-series-4: light-dark(#f59e0b, #fbbf24);
+	--su-chart-series-5: light-dark(#8b5cf6, #a78bfa);
+	--su-chart-series-6: light-dark(#14b8a6, #2dd4bf);
+	--su-chart-series-7: light-dark(#f43f5e, #fb7185);
+	--su-chart-series-8: light-dark(#84cc16, #a3e635);
+	--su-chart-series-9: light-dark(#6366f1, #818cf8);
+	--su-chart-series-10: light-dark(#f97316, #fb923c);
+	--su-chart-series-11: light-dark(#06b6d4, #22d3ee);
+	--su-chart-series-12: light-dark(#a855f7, #c084fc);
+}
+
+/* Forcing a mode. These set `color-scheme` and nothing else, so they are
+   theme-independent and safe to have several copies of on the page. */
+:where(:root)[data-mode='light'],
+[data-theme='theme-2'][data-mode='light'] {
+	color-scheme: light;
+}
+
+:where(:root)[data-mode='dark'],
+[data-theme='theme-2'][data-mode='dark'] {
+	color-scheme: dark;
 }

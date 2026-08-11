@@ -4,9 +4,6 @@
  * Fully self-contained: copy this whole file into any project, or
  * `import '@chienleng/stratum-ui/themes/theme-1.css'`.
  *
- * Custom-property declarations only — no element rules, no resets, so this
- * file can never leak styles into a consuming app.
- *
  * The `:where(:root)` arm has zero specificity: importing a single theme
  * applies it globally with nothing else required. When several theme files
  * are loaded, `[data-theme='…']` (specificity 0,1,0) always wins, so setting
@@ -17,10 +14,28 @@
  * and import them once in your root layout. Without them, the stacks below
  * fall back to system fonts.
  *
- * `data-mode` is reserved for a future dark mode; this theme is light-only.
+ * ── Light and dark ──────────────────────────────────────────────────────
+ *
+ * `data-mode` on the root element selects the colour scheme: absent follows
+ * the operating system, `'light'` and `'dark'` force it. Every colour token is
+ * declared once as `light-dark(light, dark)`; `color-scheme` is the single
+ * non-custom-property declaration, and is required both for `light-dark()` to
+ * resolve and for native scrollbars and form controls to follow. See
+ * `neutral.css` for the full rationale.
+ *
+ * OE red does not survive the move to a dark ground. At #c74523 it scores only
+ * 2.4:1 on the dark canvas, so the dark accent is lifted to #e8724f (4.9:1) —
+ * and a lifted red needs *dark* text on it, not white, so `accent-contrast`
+ * flips too. The brand red is kept as the light-mode value and as the dark
+ * chart-series entry, where a 3:1 non-text threshold applies instead.
+ *
+ * The warm grey ramp is likewise not inverted mechanically: dark mode gets its
+ * own warm charcoals, because neutral greys read cold beside the red.
  */
 :where(:root),
 [data-theme='theme-1'] {
+	color-scheme: light dark;
+
 	/* ── primitives (OE brand — not part of the themed API) ───────────── */
 	--su-oe-red: #c74523;
 	--su-oe-dark-red: #963f29;
@@ -29,6 +44,19 @@
 	--su-oe-mid-warm-grey: #c6c6c6;
 	--su-oe-warm-grey: #f1f0ed;
 	--su-oe-light-warm-grey: #faf9f6;
+
+	/* Dark-side primitives: warm charcoals rather than neutral greys, so the
+	   ground stays in the same family as the red, plus the lifted red itself. */
+	--su-oe-lift-red: #e8724f;
+	--su-oe-lift-red-hover: #f2906d;
+	--su-oe-near-black: #171614;
+	--su-oe-charcoal: #1f1e1b;
+	--su-oe-charcoal-2: #2a2825;
+	--su-oe-charcoal-3: #35322e;
+	--su-oe-rule: #403c37;
+	--su-oe-dim-warm: #948e86;
+	--su-oe-soft-warm: #a8a29a;
+	--su-oe-pale-warm: #ebe9e4;
 
 	/* ── typography ───────────────────────────────────────────────────── */
 	/* 'X Variable' covers @fontsource-variable installs; plain 'X' covers
@@ -82,9 +110,13 @@
 	--su-radius-full: 9999px;
 
 	/* ── shadows ──────────────────────────────────────────────────────── */
-	--su-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	--su-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-	--su-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+	--su-shadow-sm: 0 1px 2px 0 light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.55));
+	--su-shadow-md:
+		0 4px 6px -1px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.6)),
+		0 2px 4px -2px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.5));
+	--su-shadow-lg:
+		0 10px 15px -3px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.65)),
+		0 4px 6px -4px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.55));
 
 	/* ── z-scale ──────────────────────────────────────────────────────── */
 	--su-z-dropdown: 1150;
@@ -100,93 +132,112 @@
 
 	/* ── focus ────────────────────────────────────────────────────────── */
 	--su-focus-ring-width: 3px;
-	--su-focus-ring: rgb(53 53 53 / 0.35);
+	--su-focus-ring: light-dark(rgb(53 53 53 / 0.35), rgb(232 114 79 / 0.55));
 
 	/* ── semantic colours ─────────────────────────────────────────────── */
-	--su-surface: #ffffff;
-	--su-surface-muted: var(--su-oe-light-warm-grey);
-	--su-surface-strong: var(--su-oe-warm-grey);
-	--su-surface-emphasis: #e8e6e1;
-	--su-surface-inverse: var(--su-oe-dark-grey);
+	--su-surface: light-dark(#ffffff, var(--su-oe-charcoal));
+	--su-surface-muted: light-dark(var(--su-oe-light-warm-grey), var(--su-oe-near-black));
+	--su-surface-strong: light-dark(var(--su-oe-warm-grey), var(--su-oe-charcoal-2));
+	--su-surface-emphasis: light-dark(#e8e6e1, var(--su-oe-charcoal-3));
+	--su-surface-inverse: light-dark(var(--su-oe-dark-grey), var(--su-oe-pale-warm));
 
-	--su-text: var(--su-oe-dark-grey);
-	--su-text-secondary: #4f4f4f;
-	--su-text-muted: var(--su-oe-mid-grey);
-	--su-text-subtle: var(--su-oe-mid-warm-grey);
-	--su-text-faint: #d9d8d5;
-	--su-text-inverse: #ffffff;
+	--su-text: light-dark(var(--su-oe-dark-grey), var(--su-oe-pale-warm));
+	--su-text-secondary: light-dark(#4f4f4f, #cdc9c2);
+	--su-text-muted: light-dark(var(--su-oe-mid-grey), var(--su-oe-soft-warm));
+	--su-text-subtle: light-dark(var(--su-oe-mid-warm-grey), var(--su-oe-dim-warm));
+	--su-text-faint: light-dark(#d9d8d5, #605b54);
+	--su-text-inverse: light-dark(#ffffff, var(--su-oe-charcoal));
 
-	--su-accent: var(--su-oe-red);
-	--su-accent-hover: var(--su-oe-dark-red);
-	--su-accent-contrast: #ffffff;
+	/* Dark flips accent-contrast to the charcoal: white on the lifted red is
+	   only 3.4:1, while the charcoal clears AA. */
+	--su-accent: light-dark(var(--su-oe-red), var(--su-oe-lift-red));
+	--su-accent-hover: light-dark(var(--su-oe-dark-red), var(--su-oe-lift-red-hover));
+	--su-accent-contrast: light-dark(#ffffff, var(--su-oe-charcoal));
 
-	--su-border: var(--su-oe-warm-grey);
-	--su-border-muted: var(--su-oe-light-warm-grey);
-	--su-border-strong: var(--su-oe-mid-warm-grey);
-	--su-border-emphasis: var(--su-oe-mid-grey);
+	--su-border: light-dark(var(--su-oe-warm-grey), var(--su-oe-rule));
+	--su-border-muted: light-dark(var(--su-oe-light-warm-grey), var(--su-oe-charcoal-3));
+	--su-border-strong: light-dark(var(--su-oe-mid-warm-grey), #524d47);
+	--su-border-emphasis: light-dark(var(--su-oe-mid-grey), var(--su-oe-dim-warm));
 
-	--su-danger: #fa6060;
-	--su-success: #70d26e;
-	--su-warning: #eb1f70;
+	--su-danger: light-dark(#fa6060, #ff8080);
+	--su-success: light-dark(#70d26e, #8fe08d);
+	--su-warning: light-dark(#eb1f70, #ff5c95);
 
-	/* Status ramps around the OE status colours: backgrounds at the light
-	   end, borders in the low hundreds, text/icons at 500+. The unnumbered
-	   tokens above remain the component-API defaults. */
-	--su-danger-50: #fef1f1;
-	--su-danger-200: #fdc9c9;
-	--su-danger-500: #fa6060;
-	--su-danger-600: #e04b4b;
-	--su-danger-800: #a32e2e;
+	/* Status ramps around the OE status colours, by role rather than
+	   lightness: 50/100 tint the background, 200 draws the border, 500/600
+	   fill, 700/800 carry the text on that tint. The unnumbered tokens above
+	   remain the component-API defaults. OE's "warning" is a magenta, not an
+	   amber — kept, because it is the brand's alert colour. */
+	--su-danger-50: light-dark(#fef1f1, #2d1414);
+	--su-danger-200: light-dark(#fdc9c9, #6b2a2a);
+	--su-danger-500: light-dark(#fa6060, #ff8080);
+	--su-danger-600: light-dark(#e04b4b, #fa6060);
+	--su-danger-800: light-dark(#a32e2e, #ffd0d0);
 
-	--su-warning-50: #fdeff5;
-	--su-warning-100: #fbdcea;
-	--su-warning-200: #f7b3d0;
-	--su-warning-500: #eb1f70;
-	--su-warning-600: #c9145e;
-	--su-warning-700: #a5104d;
-	--su-warning-800: #820c3d;
+	--su-warning-50: light-dark(#fdeff5, #2e0c1a);
+	--su-warning-100: light-dark(#fbdcea, #3f1024);
+	--su-warning-200: light-dark(#f7b3d0, #661a3a);
+	--su-warning-500: light-dark(#eb1f70, #ff5c95);
+	--su-warning-600: light-dark(#c9145e, #eb1f70);
+	--su-warning-700: light-dark(#a5104d, #ff8fb5);
+	--su-warning-800: light-dark(#820c3d, #ffc2d7);
 
-	--su-success-50: #f1fbf1;
-	--su-success-100: #dcf5db;
-	--su-success-500: #70d26e;
-	--su-success-600: #57b855;
-	--su-success-700: #2f6b2e;
+	--su-success-50: light-dark(#f1fbf1, #0f2410);
+	--su-success-100: light-dark(#dcf5db, #163318);
+	--su-success-500: light-dark(#70d26e, #8fe08d);
+	--su-success-600: light-dark(#57b855, #70d26e);
+	--su-success-700: light-dark(#2f6b2e, #c8f0c7);
 
-	/* Data accent (blue — highlights, selections, focus in data UI).
+	/* Data accent (periwinkle — highlights, selections, focus in data UI).
 	   Distinct from --su-accent, which is the primary-action colour. */
-	--su-data-accent-50: #eff3ff;
-	--su-data-accent-100: #dde7ff;
-	--su-data-accent-300: #a3bcff;
-	--su-data-accent-500: #577cff;
-	--su-data-accent-600: #3d61e8;
-	--su-data-accent-900: #1e2f7a;
+	--su-data-accent-50: light-dark(#eff3ff, #131a33);
+	--su-data-accent-100: light-dark(#dde7ff, #1b2450);
+	--su-data-accent-300: light-dark(#a3bcff, #4a63c9);
+	--su-data-accent-500: light-dark(#577cff, #8098ff);
+	--su-data-accent-600: light-dark(#3d61e8, #577cff);
+	--su-data-accent-900: light-dark(#1e2f7a, #dde7ff);
 
-	--su-overlay: rgb(0 0 0 / 0.4);
-	--su-tooltip-bg: var(--su-oe-dark-grey);
-	--su-tooltip-text: #ffffff;
+	--su-overlay: light-dark(rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.65));
+	--su-tooltip-bg: light-dark(var(--su-oe-dark-grey), var(--su-oe-pale-warm));
+	--su-tooltip-text: light-dark(#ffffff, var(--su-oe-charcoal));
 
 	/* ── chart tokens ─────────────────────────────────────────────────── */
-	--su-chart-surface: #ffffff;
-	--su-chart-grid: #efefef;
-	--su-chart-grid-strong: #333333;
-	--su-chart-axis-text: var(--su-oe-mid-warm-grey);
+	--su-chart-surface: light-dark(#ffffff, var(--su-oe-charcoal));
+	--su-chart-grid: light-dark(#efefef, var(--su-oe-rule));
+	--su-chart-grid-strong: light-dark(#333333, var(--su-oe-dim-warm));
+	--su-chart-axis-text: light-dark(var(--su-oe-mid-warm-grey), var(--su-oe-soft-warm));
 	--su-chart-axis-font-size: var(--su-font-size-2xs);
-	--su-chart-tick: #000000;
-	--su-chart-focus: var(--su-oe-red);
-	--su-chart-brush-handle: var(--su-oe-dark-red);
-	--su-chart-brush-selection: rgb(150 63 41 / 0.22);
-	--su-chart-annotation: var(--su-oe-mid-grey);
+	--su-chart-tick: light-dark(#000000, var(--su-oe-soft-warm));
+	--su-chart-focus: light-dark(var(--su-oe-red), var(--su-oe-lift-red));
+	--su-chart-brush-handle: light-dark(var(--su-oe-dark-red), var(--su-oe-lift-red));
+	--su-chart-brush-selection: light-dark(rgb(150 63 41 / 0.22), rgb(232 114 79 / 0.25));
+	--su-chart-annotation: light-dark(var(--su-oe-mid-grey), var(--su-oe-soft-warm));
 
-	--su-chart-series-1: #577cff;
-	--su-chart-series-2: #4cb9b9;
-	--su-chart-series-3: #f48e1b;
-	--su-chart-series-4: #2c7629;
-	--su-chart-series-5: #fed500;
-	--su-chart-series-6: #5ea0c0;
-	--su-chart-series-7: #c74523;
-	--su-chart-series-8: #521986;
-	--su-chart-series-9: #927bad;
-	--su-chart-series-10: #744a26;
-	--su-chart-series-11: #121212;
-	--su-chart-series-12: #6a6a6a;
+	/* The dark set lifts each hue toward the light end. Series 11 is OE's
+	   near-black in light and has to become a near-white in dark, or it
+	   vanishes into the ground entirely. */
+	--su-chart-series-1: light-dark(#577cff, #8ba3ff);
+	--su-chart-series-2: light-dark(#4cb9b9, #6fd0d0);
+	--su-chart-series-3: light-dark(#f48e1b, #f7a94f);
+	--su-chart-series-4: light-dark(#2c7629, #6bb567);
+	--su-chart-series-5: light-dark(#fed500, #ffe14d);
+	--su-chart-series-6: light-dark(#5ea0c0, #85bcd6);
+	--su-chart-series-7: light-dark(#c74523, #e8724f);
+	--su-chart-series-8: light-dark(#521986, #a173d1);
+	--su-chart-series-9: light-dark(#927bad, #b6a3cc);
+	--su-chart-series-10: light-dark(#744a26, #b48a5f);
+	--su-chart-series-11: light-dark(#121212, #d8d4ce);
+	--su-chart-series-12: light-dark(#6a6a6a, #a5a5a5);
+}
+
+/* Forcing a mode. These set `color-scheme` and nothing else, so they are
+   theme-independent and safe to have several copies of on the page. */
+:where(:root)[data-mode='light'],
+[data-theme='theme-1'][data-mode='light'] {
+	color-scheme: light;
+}
+
+:where(:root)[data-mode='dark'],
+[data-theme='theme-1'][data-mode='dark'] {
+	color-scheme: dark;
 }
