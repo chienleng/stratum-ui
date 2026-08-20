@@ -6,7 +6,7 @@ Updated: 2026-08-19
 
 - Version 0.12.3 is the current published package release.
 - Public entry points cover UI, forms, charts, maps, actions, utilities, icons, and themes.
-- Workspace HQ, chienleng.com, and TRMNL Screens consume the library.
+- Cadence, chienleng.com, and TRMNL Screens consume the library.
 
 ## Next
 
