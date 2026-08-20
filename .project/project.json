@@ -1,9 +1,0 @@
-{
-	"schemaVersion": 1,
-	"name": "Stratum UI",
-	"summary": "Published Svelte 5 component and LayerCake chart library with token-based themes.",
-	"lifecycle": "active",
-	"priority": "high",
-	"owners": ["steventan"],
-	"tags": ["svelte", "components", "charts", "design-system", "npm"]
-}

@@ -1,8 +1,8 @@
 # Stratum UI documentation
 
 The root [README](../README.md) is the component, entry-point, theme, chart, and
-map reference. Library constraints live in [AGENTS.md](../AGENTS.md), with
-current state in [`.project/STATUS.md`](../.project/STATUS.md).
+map reference. Library constraints live in [AGENTS.md](../AGENTS.md). Current
+state and workflow records are maintained in Cadence.
 
 ## Agent workflows
 
