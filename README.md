@@ -24,18 +24,18 @@ Import a theme once in your root layout, then use components:
 
 ## Entry points
 
-| Import                                  | Contents                                                                                                                                                                                                       |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@chienleng/stratum-ui`                 | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps                                                                                            |
-| `@chienleng/stratum-ui/charts`          | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities |
-| `@chienleng/stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts                                                                                                             |
-| `@chienleng/stratum-ui/ui`              | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, `Toaster` + `createToastStore`, …                                               |
-| `@chienleng/stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Textarea`, `DateField`, `CurrencyInput`, `Toggle`, `RangeSelector`                                                                 |
-| `@chienleng/stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                   |
-| `@chienleng/stratum-ui/utils`           | SI-unit conversion, number/date formatting (incl. `parseCurrency`), data transforms                                                                                                                            |
-| `@chienleng/stratum-ui/map`             | `PointMap` (MapLibre GL bubble map), `MapLegend`, `collapseMapAttribution`, `DEFAULT_MAP_STYLES` — requires the optional peers `svelte-maplibre-gl` + `maplibre-gl`                                            |
-| `@chienleng/stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                    |
-| `@chienleng/stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                       |
+| Import                                  | Contents                                                                                                                                                                                                                   |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@chienleng/stratum-ui`                 | Theme helpers (`breakpoints`, `seriesVar`, `resolveToken`, `tokenGroups`), palette resolvers, fuel-tech colour maps                                                                                                        |
+| `@chienleng/stratum-ui/charts`          | `ChartStore` + option/style/tooltip stores, `StratumChart`, `StackedAreaChart`, `BarChart`, `GroupedBarChart`, `MiniCharts`, `DateBrush`, tooltips, header/controls, presets, sync helpers, interval utilities             |
+| `@chienleng/stratum-ui/charts/elements` | The LayerCake SVG elements (axes, marks, overlays, `InteractionLayer`) for composing custom charts                                                                                                                         |
+| `@chienleng/stratum-ui/ui`              | `Button`, `Card` family, `Tooltip`, `Modal`, `Sheet`, `BottomSheet`, `OptionsMenu`, `Switch` family, `GridLayout`, `Skeleton`, `Toaster` + `createToastStore`, …                                                           |
+| `@chienleng/stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Textarea`, `DateField`, `CurrencyInput`, `Toggle`, `RangeSelector`                                                                             |
+| `@chienleng/stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                               |
+| `@chienleng/stratum-ui/utils`           | SI-unit conversion, number/date formatting (incl. `parseCurrency`), data transforms                                                                                                                                        |
+| `@chienleng/stratum-ui/map`             | `PointMap` (MapLibre GL bubble map), `MapLegend`, `DaylightLayer`, `CloudCoverLayer`, `collapseMapAttribution`, `DEFAULT_MAP_STYLES`, `isLightMapTheme` — requires the optional peers `svelte-maplibre-gl` + `maplibre-gl` |
+| `@chienleng/stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                                |
+| `@chienleng/stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                                   |
 
 ## Theming
 
@@ -188,10 +188,20 @@ pnpm add -D svelte-maplibre-gl maplibre-gl
 
 Notes:
 
-- Base styles come from `DEFAULT_MAP_STYLES` (CARTO positron/dark-matter CDN
-  styles plus an Esri World Imagery raster style for `satellite`). Override any
-  of them per app via the `mapStyles` prop — e.g. self-hosted style JSON and
-  glyphs: `mapStyles={{ light: '/map-styles/positron.json' }}`.
+- Base styles come from `DEFAULT_MAP_STYLES` (CARTO positron/voyager/dark-matter
+  CDN styles plus an Esri World Imagery raster style for `satellite`). Override
+  any of them per app via the `mapStyles` prop — e.g. self-hosted style JSON and
+  glyphs: `mapStyles={{ light: '/map-styles/positron.json' }}`. `isLightMapTheme`
+  answers "is this basemap dark?" consistently (`voyager` groups with `light`).
+- `DaylightLayer` (day/night terminator with graduated twilight bands, computed
+  locally — no network requests) and `CloudCoverLayer` (near-real-time NASA
+  GIBS · JMA Himawari infrared cloud imagery, no API key, ~10-minute cadence,
+  **Asia-Pacific coverage only** — blank beyond the Himawari full disc) compose
+  into `PointMap`'s `children` snippet. Both take `visible`, `mapTheme` (picks a
+  shade/treatment that reads on that basemap) and `beforeId` (pass
+  `"point-map-circles"` to render beneath PointMap's markers). Credit NASA GIBS
+  when using the cloud layer; the source's attribution string flows into the
+  map's attribution control automatically.
 - On `maplibre-gl` v6 (ESM-only) the tile worker is a separate module that
   bundlers do not pick up on their own. Under Vite, side-effect import
   `svelte-maplibre-gl/vite` once in the route/component that renders the map —

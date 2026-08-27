@@ -1,7 +1,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
 /** Base-style preset for the map components. */
-export type MapTheme = 'light' | 'dark' | 'satellite';
+export type MapTheme = 'light' | 'voyager' | 'dark' | 'satellite';
 
 /** Per-theme base-style overrides (URL or inline style), merged over `DEFAULT_MAP_STYLES`. */
 export type MapStyles = Partial<Record<MapTheme, string | StyleSpecification>>;

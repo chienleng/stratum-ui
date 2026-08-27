@@ -1,10 +1,7 @@
 import type { StyleSpecification } from 'maplibre-gl';
 import type { MapTheme } from './types.js';
 
-/**
- * Satellite base as an inline raster-only style over Esri World Imagery —
- * needs no glyphs, sprites or API keys, so it works out of the box.
- */
+/** Inline Esri World Imagery style with no glyph, sprite or API-key dependency. */
 const SATELLITE_STYLE: StyleSpecification = {
 	version: 8,
 	sources: {
@@ -20,13 +17,15 @@ const SATELLITE_STYLE: StyleSpecification = {
 	layers: [{ id: 'esri-world-imagery', type: 'raster', source: 'esri-world-imagery' }]
 };
 
-/**
- * Default base styles per map theme. Light/dark use CARTO's public GL style
- * CDN (fine for demos and light traffic; heavy consumers should pass their
- * own via PointMap's `mapStyles` prop, e.g. self-hosted styles and glyphs).
- */
+/** Built-in CARTO and Esri styles. High-traffic consumers should provide their own. */
 export const DEFAULT_MAP_STYLES: Record<MapTheme, string | StyleSpecification> = {
 	light: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+	voyager: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
 	dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 	satellite: SATELLITE_STYLE
 };
+
+/** Whether the theme uses a light-toned basemap. */
+export function isLightMapTheme(theme: MapTheme): boolean {
+	return theme === 'light' || theme === 'voyager';
+}

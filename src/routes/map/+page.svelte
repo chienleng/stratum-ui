@@ -5,6 +5,8 @@
 	import { fuelTechColours, type FuelTechCode } from '@chienleng/stratum-ui';
 	import {
 		PointMap,
+		DaylightLayer,
+		CloudCoverLayer,
 		type MapLegendSpec,
 		type MapPoint,
 		type MapTheme
@@ -190,6 +192,17 @@
 
 	let selectedPoint: MapPoint | null = $state(null);
 	let mapTheme: MapTheme = $state('light');
+
+	const THEME_TABS = [
+		{ label: 'Light', value: 'light' },
+		{ label: 'Voyager', value: 'voyager' },
+		{ label: 'Dark', value: 'dark' },
+		{ label: 'Satellite', value: 'satellite' }
+	];
+
+	let overlayTheme: MapTheme = $state('voyager');
+	let showDaylight = $state(true);
+	let showClouds = $state(true);
 </script>
 
 <svelte:head>
@@ -218,20 +231,39 @@
 
 <Demo
 	title="Base styles"
-	description="mapTheme switches between the built-in DEFAULT_MAP_STYLES — CARTO positron/dark-matter and an Esri World Imagery raster style. Apps can override any of them via the mapStyles prop (e.g. self-hosted styles and glyphs)."
+	description="mapTheme switches between the built-in DEFAULT_MAP_STYLES — CARTO positron/voyager/dark-matter and an Esri World Imagery raster style. Apps can override any of them via the mapStyles prop (e.g. self-hosted styles and glyphs)."
 >
 	<div class="theme-switch">
 		<SwitchTabs
-			buttons={[
-				{ label: 'Light', value: 'light' },
-				{ label: 'Dark', value: 'dark' },
-				{ label: 'Satellite', value: 'satellite' }
-			]}
+			buttons={THEME_TABS}
 			selected={mapTheme}
 			onchange={(value) => (mapTheme = value as MapTheme)}
 		/>
 	</div>
 	<PointMap {points} {mapTheme} height="380px" />
+</Demo>
+
+<Demo
+	title="Day/night and cloud cover overlays"
+	description="DaylightLayer shades the night side with graduated twilight bands, computed locally with no network requests. CloudCoverLayer overlays near-real-time NASA GIBS Himawari infrared imagery (Asia-Pacific coverage, no API key), keyed so only clouds render. Both compose through PointMap's children snippet, pick a treatment from mapTheme, and slot beneath the points via beforeId."
+>
+	<div class="theme-switch">
+		<SwitchTabs
+			buttons={THEME_TABS}
+			selected={overlayTheme}
+			onchange={(value) => (overlayTheme = value as MapTheme)}
+		/>
+	</div>
+	<label class="overlay-toggle">
+		<input type="checkbox" bind:checked={showDaylight} /> Day/night
+	</label>
+	<label class="overlay-toggle">
+		<input type="checkbox" bind:checked={showClouds} /> Cloud cover
+	</label>
+	<PointMap {points} mapTheme={overlayTheme} height="380px">
+		<CloudCoverLayer visible={showClouds} mapTheme={overlayTheme} beforeId="point-map-circles" />
+		<DaylightLayer visible={showDaylight} mapTheme={overlayTheme} beforeId="point-map-circles" />
+	</PointMap>
 </Demo>
 
 <style>
@@ -249,5 +281,13 @@
 
 	.theme-switch {
 		margin-bottom: var(--su-space-4, 1rem);
+	}
+
+	.overlay-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--su-space-2, 0.5rem);
+		margin: 0 var(--su-space-4, 1rem) var(--su-space-4, 1rem) 0;
+		font-size: var(--su-font-size-sm, 0.875rem);
 	}
 </style>
