@@ -29,6 +29,13 @@ Platform-specific instruction files must defer here rather than duplicate it.
   source of exported behaviour.
 - Export public modules through the appropriate subpath barrel and keep
   `package.json` exports aligned.
+- Add new icons to the `./icons` barrel (`src/lib/icons/index.ts`) and tell
+  consumers to import from it, never from per-file paths like
+  `@chienleng/stratum-ui/icons/X.svelte`: Vite 8's Rolldown dependency scanner
+  cannot resolve the relative `./Icon.svelte` imports inside deep-imported
+  `.svelte` files and skips pre-bundling entirely. The `./icons/*` export
+  remains only for backwards compatibility. The demo site is exempt because
+  its aliases resolve to `src/lib` source files, which the scanner handles.
 - Themes are CSS custom-property contracts. Reuse semantic `--su-*` tokens and
   verify light, dark, and forced `data-mode` behaviour.
 - Add focused tests beside the behaviour they cover.
