@@ -165,6 +165,33 @@ The showcase site (`pnpm dev`) demonstrates every component, including
 tooltip modes, pan/zoom, brushing and the live token sheet at
 `/theme/tokens` (with copy-theme-CSS buttons).
 
+## Accessible selects
+
+`Select` renders a select-only combobox. Give it a visible label using `Field`
+or `<label for>` and the matching `id`. Use `label` to name the popup as well as
+provide its empty-state text. `aria-label` and `aria-labelledby` are available
+when an explicit accessible name is needed; `aria-labelledby` takes precedence.
+
+```svelte
+<label for="record">Project record</label>
+<Select
+	id="record"
+	label="Project record"
+	selected={record}
+	options={records}
+	onchange={(value) => (record = value)}
+	portalTarget="main"
+/>
+```
+
+`portalTarget` accepts an element or selector and defaults to `document.body`.
+Choose a container within the relevant landmark or dialog when the popup should
+remain in that reading context or inherit a scoped theme. The container must
+exist when the popup mounts and allow the floating content to remain visible.
+Keyboard focus stays on the trigger while `aria-activedescendant` identifies the
+highlighted option; `aria-controls` references the open listbox. Popup motion
+preserves full text opacity throughout its animation.
+
 ## Maps
 
 The `./map` entry point is the only one with peer dependencies beyond Svelte —

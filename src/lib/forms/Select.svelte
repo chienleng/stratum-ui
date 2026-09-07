@@ -32,6 +32,9 @@
 		options?: SelectOption[];
 		/** Placeholder/label shown when nothing is selected (static mode: list heading). */
 		label?: string;
+		/** Accessible name overrides for a labelled field or an icon-only trigger. */
+		'aria-label'?: string;
+		'aria-labelledby'?: string;
 		/** Id for the dropdown trigger, so an external `<label for>` — e.g. a
 		 *  surrounding `Field` — resolves to it. Not applied in `staticDisplay`
 		 *  mode, which has no single labelable control. */
@@ -40,6 +43,9 @@
 		name?: string;
 		variant?: SelectVariant;
 		staticDisplay?: boolean;
+		/** Popup container; defaults to document.body. Use a landmark or dialog
+		 *  container to retain its reading context and scoped theme. */
+		portalTarget?: Element | string;
 		position?: 'top' | 'bottom';
 		align?: 'left' | 'right';
 		compact?: boolean;
@@ -51,16 +57,27 @@
 		selected = undefined,
 		options = [],
 		label = '',
+		'aria-label': ariaLabel,
+		'aria-labelledby': ariaLabelledby,
 		id = undefined,
 		name = '',
 		variant = 'inline',
 		staticDisplay = false,
+		portalTarget = undefined,
 		position = 'bottom',
 		align = 'left',
 		compact = false,
 		onchange,
 		class: className = ''
 	}: Props = $props();
+
+	const uid = $props.id();
+	let triggerId = $derived(id ?? `${uid}-trigger`);
+	const listId = `${uid}-listbox`;
+	let open = $state(false);
+	// External <label for> remains authoritative when a trigger id is supplied.
+	let triggerLabel = $derived(ariaLabel ?? (id ? undefined : label || undefined));
+	let listLabel = $derived(ariaLabel ?? (label || undefined));
 
 	let displayLabel = $derived.by(() => {
 		const find = options.find((opt) => !opt.isGroupHeader && opt.value === selected);
@@ -99,7 +116,7 @@
 	{#if staticDisplay}
 		<div class="form-label">{label}</div>
 
-		<ul class="list static" role="listbox">
+		<ul class="list static" role="listbox" aria-label={listLabel} aria-labelledby={ariaLabelledby}>
 			{#each options as opt, i (i)}
 				{#if opt.divider}
 					<li class="divider" role="presentation"><span></span></li>
@@ -126,11 +143,19 @@
 			{/each}
 		</ul>
 	{:else}
-		<Select.Root type="single" {items} bind:value={getValue, setValue}>
-			<Select.Trigger {id}>
+		<Select.Root type="single" {items} bind:open bind:value={getValue, setValue}>
+			<Select.Trigger id={triggerId}>
 				{#snippet child({ props })}
-					<button {...props} type="button" class="trigger">
-						<span class="value">{displayLabel}</span>
+					<button
+						{...props}
+						type="button"
+						role="combobox"
+						aria-controls={open ? listId : undefined}
+						aria-label={triggerLabel}
+						aria-labelledby={ariaLabelledby}
+						class="trigger"
+					>
+						<span id={`${triggerId}-value`} class="value">{displayLabel}</span>
 						<svg
 							class="chevron"
 							xmlns="http://www.w3.org/2000/svg"
@@ -150,8 +175,9 @@
 				{/snippet}
 			</Select.Trigger>
 
-			<Select.Portal>
+			<Select.Portal to={portalTarget}>
 				<Select.Content
+					id={listId}
 					forceMount
 					side={position}
 					align={align === 'right' ? 'end' : 'start'}
@@ -162,10 +188,13 @@
 							<div {...wrapperProps}>
 								<ul
 									{...contentProps}
+									id={listId}
+									aria-label={listLabel}
+									aria-labelledby={ariaLabelledby ?? (listLabel ? undefined : `${triggerId}-value`)}
 									class="list dropdown"
 									data-compact={compact || undefined}
 									data-variant={variant}
-									transition:fly={{ y: -5, duration: 150 }}
+									transition:fly={{ y: -5, duration: 150, opacity: 1 }}
 								>
 									{#each options as opt, i (i)}
 										{#if opt.divider}
