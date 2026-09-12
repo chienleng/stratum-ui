@@ -108,6 +108,9 @@ importers:
       globals:
         specifier: ^17.6.0
         version: 17.7.0
+      loadersz:
+        specifier: ^0.4.1
+        version: 0.4.1(svelte@5.56.8(@typescript-eslint/types@8.64.0))
       maplibre-gl:
         specifier: ^6.0.0
         version: 6.0.0
@@ -1070,6 +1073,24 @@ packages:
   lilconfig@2.1.0:
     resolution: {integrity: sha512-utWOt/GHzuUxnLKxB6dk81RoOeoNeHgbrXiuGk4yyF5qlRz+iIVWu56E2fqGHFrXz0QNUhLB/8nKqvRH66JKGQ==}
     engines: {node: '>=10'}
+
+  loadersz@0.4.1:
+    resolution: {integrity: sha512-QJZEvXVDnV5MEK22wHAgxG/1pzIUMEKx0/Ubqe4CVqwmUnUXINxamRvMWvKclw+JYF224vhG7v/TwjP5a3xizw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@angular/core': '>=21 <23'
+      react: '>=18'
+      svelte: '>=4'
+      vue: '>=3'
+    peerDependenciesMeta:
+      '@angular/core':
+        optional: true
+      react:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
 
   locate-character@3.0.0:
     resolution: {integrity: sha512-SW13ws7BjaeJ6p7Q6CO2nchbYEc3X3J6WrmTTDto7yMPqVSZTUyY5Tjbid+Ab8gLnATtygYtiDIJGQRRn2ZOiA==}
@@ -2381,6 +2402,10 @@ snapshots:
       lightningcss-win32-x64-msvc: 1.33.0
 
   lilconfig@2.1.0: {}
+
+  loadersz@0.4.1(svelte@5.56.8(@typescript-eslint/types@8.64.0)):
+    optionalDependencies:
+      svelte: 5.56.8(@typescript-eslint/types@8.64.0)
 
   locate-character@3.0.0: {}
 

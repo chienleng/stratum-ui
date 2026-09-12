@@ -26,6 +26,7 @@
 				{ href: '/ui/overlays', label: 'Overlays' },
 				{ href: '/ui/controls', label: 'Controls' },
 				{ href: '/ui/feedback', label: 'Feedback' },
+				{ href: '/ui/loaders', label: 'Animated loaders' },
 				{ href: '/ui/data', label: 'Data' }
 			]
 		},
