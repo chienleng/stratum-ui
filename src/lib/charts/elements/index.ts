@@ -25,6 +25,7 @@ export { default as LineX } from './LineX.svelte';
 export { default as LineY } from './LineY.svelte';
 export { default as Dot } from './Dot.svelte';
 export { default as StepHoverBand } from './StepHoverBand.svelte';
+export { default as BarHoverBand } from './BarHoverBand.svelte';
 export { default as Annotations } from './Annotations.svelte';
 
 // Overlays

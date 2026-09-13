@@ -16,7 +16,7 @@
 	import ChartTooltip from './ChartTooltip.svelte';
 	import ChartTooltipCompactStrip from './ChartTooltipCompactStrip.svelte';
 	import ChartTooltipCompactCard from './ChartTooltipCompactCard.svelte';
-	import ChartTooltipFloating from './ChartTooltipFloating.svelte';
+	import ChartTooltipFloating, { type FloatingTooltipAnchor } from './ChartTooltipFloating.svelte';
 	import ChartZoomControls from './ChartZoomControls.svelte';
 	import StackedAreaChart from './StackedAreaChart.svelte';
 	import BarChart from './BarChart.svelte';
@@ -52,6 +52,12 @@
 		 * the container's left and right edges. Use when the chart is full-bleed.
 		 */
 		tooltipInsetPx?: number;
+		/**
+		 * For 'floating' mode: 'cursor' (default) snaps the card to the top or
+		 * bottom half away from the pointer; 'top' pins it to the top and only
+		 * moves it sideways — the calm choice for bar charts.
+		 */
+		tooltipAnchor?: FloatingTooltipAnchor;
 		showOptions?: boolean;
 		defaultTooltipText?: string;
 		class?: string;
@@ -133,6 +139,7 @@
 		tooltipCardAlign = 'left',
 		tooltipDodgeRightPx = 0,
 		tooltipInsetPx = 0,
+		tooltipAnchor = 'cursor',
 		showOptions = true,
 		defaultTooltipText = '',
 		class: className = '',
@@ -406,7 +413,12 @@
 		{/if}
 
 		{#if effectiveTooltipMode === 'floating'}
-			<ChartTooltipFloating {chart} dodgeRightPx={effectiveDodgeRightPx} insetPx={tooltipInsetPx} />
+			<ChartTooltipFloating
+				{chart}
+				dodgeRightPx={effectiveDodgeRightPx}
+				insetPx={tooltipInsetPx}
+				anchor={tooltipAnchor}
+			/>
 		{/if}
 
 		{#if zoomMode === 'floating' && onzoomin && onzoomout}

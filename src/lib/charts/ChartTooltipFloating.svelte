@@ -20,7 +20,10 @@
 		buildSeriesRows
 	} from './tooltip-derivations.js';
 	import { computeStepBand } from './elements/step-band.js';
+	import { BAR_CHART_PADDING, barBandFraction } from './elements/bar-band.js';
 	import { indexOfTime } from './binary-search.js';
+
+	export type FloatingTooltipAnchor = 'cursor' | 'top';
 
 	interface Props {
 		chart: ChartStore;
@@ -36,10 +39,23 @@
 		 * you still want the overlay to stand off from the edges.
 		 */
 		insetPx?: number;
+		/**
+		 * 'cursor' (default) snaps the card to the top or bottom of the chart
+		 * depending on which half the pointer is in; 'top' keeps it at the top
+		 * and only moves it sideways, which suits bar charts, where the card
+		 * would otherwise leap as the pointer crosses the middle of a column.
+		 */
+		anchor?: FloatingTooltipAnchor;
 		class?: string;
 	}
 
-	let { chart, dodgeRightPx = 0, insetPx = 0, class: className = '' }: Props = $props();
+	let {
+		chart,
+		dodgeRightPx = 0,
+		insetPx = 0,
+		anchor = 'cursor',
+		class: className = ''
+	}: Props = $props();
 
 	let wrapperEl = $state<HTMLDivElement | undefined>(undefined);
 	let wrapperWidth = $state(0);
@@ -55,7 +71,7 @@
 	// chart pointer events. rAF-throttled: cursorY only drives the top/bottom
 	// snap, so one layout read + state write per frame is plenty.
 	$effect(() => {
-		if (!wrapperEl) return;
+		if (!wrapperEl || anchor === 'top') return;
 		const el: HTMLDivElement = wrapperEl;
 		let rafId: number | null = null;
 		let lastClientY = 0;
@@ -117,13 +133,33 @@
 		return drawLeft + ratio * drawWidth;
 	}
 
-	// Convert hoverTime → x-pixel in the chart area. In step mode this is the
-	// band's left edge (because activeData.time is snapped to the band start).
-	let hoverX = $derived(activeData ? timeToX(activeData.time) : null);
+	/**
+	 * Bar charts lay their columns out on a band scale, not the time axis:
+	 * the active column's pixel edges come from its index and the renderer's
+	 * fixed padding. Null for every other chart type.
+	 */
+	let barBandX = $derived.by(() => {
+		if (!chart.chartOptions.isAnyBarType || !activeData || !wrapperWidth) return null;
+		const data = chart.seriesScaledData;
+		const band = barBandFraction(data.indexOf(activeData), data.length);
+		if (!band) return null;
+		const plotWidth = wrapperWidth - BAR_CHART_PADDING.left - BAR_CHART_PADDING.right;
+		if (plotWidth <= 0) return null;
+		return {
+			left: BAR_CHART_PADDING.left + band.start * plotWidth,
+			right: BAR_CHART_PADDING.left + band.end * plotWidth
+		};
+	});
 
-	// Right edge of the active band — only meaningful in step mode. Returns
-	// null outside step mode so the line-mode placement is unchanged.
+	// Convert hoverTime → x-pixel in the chart area. In step mode this is the
+	// band's left edge (because activeData.time is snapped to the band start);
+	// for bars it is the column's left edge.
+	let hoverX = $derived(barBandX ? barBandX.left : activeData ? timeToX(activeData.time) : null);
+
+	// Right edge of the active band — meaningful in step mode and for bars.
+	// Returns null otherwise so the line-mode placement is unchanged.
 	let activeBandRightX = $derived.by(() => {
+		if (barBandX) return barBandX.right;
 		if (!isStepMode || !activeData) return null;
 		const data = chart.seriesScaledData;
 		if (!data?.length) return null;
@@ -151,19 +187,23 @@
 		return Math.max(insetPx, Math.min(wrapperWidth - tooltipWidth - insetPx, desired));
 	});
 
-	// Snap the tooltip to the top or bottom of the chart depending on which
-	// half the cursor is in. Cursor in upper half → tooltip at the bottom;
-	// cursor in lower half → tooltip at the top (with optional dodge for
-	// top-right UI like zoom buttons). Binary placement keeps the card from
-	// jittering vertically as the pointer moves; the CSS top/left transition
-	// smooths the actual swap.
+	// With the cursor anchor, snap the tooltip to the top or bottom of the
+	// chart depending on which half the cursor is in. Cursor in upper half →
+	// tooltip at the bottom; cursor in lower half → tooltip at the top (with
+	// optional dodge for top-right UI like zoom buttons). Binary placement
+	// keeps the card from jittering vertically as the pointer moves; the CSS
+	// top/left transition smooths the actual swap. The top anchor skips the
+	// snap and only ever dodges.
 	let tooltipTop = $derived.by(() => {
 		const TOP = 8;
 		const DODGE_TOP = 36;
 		const BOTTOM_GAP = 8;
 
 		const canSnapBottom =
-			cursorY !== null && tooltipHeight > 0 && wrapperHeight > tooltipHeight + BOTTOM_GAP + TOP;
+			anchor === 'cursor' &&
+			cursorY !== null &&
+			tooltipHeight > 0 &&
+			wrapperHeight > tooltipHeight + BOTTOM_GAP + TOP;
 
 		if (canSnapBottom && cursorY !== null && cursorY < wrapperHeight / 2) {
 			return wrapperHeight - tooltipHeight - BOTTOM_GAP;

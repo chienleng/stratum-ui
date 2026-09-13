@@ -11,7 +11,8 @@
 	import { LayerCake, Svg } from 'layercake';
 	import { scaleBand, scaleLinear } from 'd3-scale';
 	import { stack as d3Stack, stackOffsetDiverging } from 'd3-shape';
-	import { AxisY, GroupedBar, StackedBar, AxisXRotated } from './elements/index.js';
+	import { AxisY, BarHoverBand, GroupedBar, StackedBar, AxisXRotated } from './elements/index.js';
+	import { BAR_BAND_PADDING, BAR_CHART_PADDING } from './elements/bar-band.js';
 	import { formatMonthYear } from './date-labels.js';
 	import type ChartStore from './ChartStore.svelte.js';
 
@@ -54,8 +55,18 @@
 		return data.map((d: any) => ({ ...d, _xLabel: bandLabel(d) }));
 	});
 
+	/** The band domain value of a row: its category, or the time-series label. */
+	function bandOf(row: any): string {
+		return row.category ?? row._xLabel ?? bandLabel(row);
+	}
+
 	/** Band domain labels for the x-axis */
-	let categories = $derived(dataset.map((d: any) => d.category ?? d._xLabel));
+	let categories = $derived(dataset.map(bandOf));
+
+	/* Hover and focus rows come from the store's unaugmented data, so the band
+	   label is recomputed rather than read from `_xLabel`. */
+	let hoverBand = $derived(chart.hoverData ? bandOf(chart.hoverData) : undefined);
+	let focusBand = $derived(chart.focusData ? bandOf(chart.focusData) : undefined);
 
 	/** D3 stack data for stacked mode */
 	let stackedData = $derived.by((): any[] => {
@@ -73,8 +84,9 @@
 	/**
 	 * Handle series hover by updating chart store and forwarding event.
 	 * Uses setHover for time-series data and setHoverCategory for category data.
+	 * Column hover (from the band's hit area) carries no series key.
 	 */
-	function handleSeriesHover(evt: { data: any; key: string }) {
+	function handleSeriesHover(evt: { data: any; key?: string }) {
 		if (isCategoryChart) {
 			if (evt?.data?.category !== undefined) {
 				chart.setHoverCategory(evt.data.category, evt.key);
@@ -96,8 +108,8 @@
 
 <div class="su-bar-chart" style:height="{styles.chartHeightPx}px">
 	<LayerCake
-		padding={{ top: 10, right: 15, bottom: 80, left: 50 }}
-		xScale={scaleBand().paddingInner(0.2).paddingOuter(0.1)}
+		padding={BAR_CHART_PADDING}
+		xScale={scaleBand().paddingInner(BAR_BAND_PADDING.inner).paddingOuter(BAR_BAND_PADDING.outer)}
 		yScale={scaleLinear()}
 		xDomain={categories}
 		yDomain={chart.yDomain}
@@ -105,6 +117,14 @@
 	>
 		<!-- Main chart area with interactive bars -->
 		<Svg>
+			<BarHoverBand
+				{dataset}
+				label={bandOf}
+				hoverLabel={hoverBand}
+				focusLabel={focusBand}
+				onhover={(row) => handleSeriesHover({ data: row })}
+				onleave={handleSeriesOut}
+			/>
 			{#if isStacked}
 				<StackedBar
 					{stackedData}

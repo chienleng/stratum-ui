@@ -161,6 +161,12 @@ pnpm add -D @fontsource-variable/inter @fontsource-variable/jetbrains-mono
 <StratumChart {chart} showHeader enablePan resizable />
 ```
 
+Bar charts highlight the hovered column with a band and report hover for the
+whole column, not only the bar under the pointer. The floating tooltip places
+itself beside the hovered column; pass `tooltipAnchor="top"` to keep it at the
+top of the chart and let it move only sideways, rather than snapping between
+the chart's halves as the pointer moves.
+
 The showcase site (`pnpm dev`) demonstrates every component, including
 tooltip modes, pan/zoom, brushing and the live token sheet at
 `/theme/tokens` (with copy-theme-CSS buttons).

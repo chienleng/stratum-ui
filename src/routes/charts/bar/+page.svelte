@@ -1,9 +1,15 @@
 <script lang="ts">
-	import { BarChart } from '@chienleng/stratum-ui/charts';
+	import { BarChart, StratumChart } from '@chienleng/stratum-ui/charts';
 	import Demo from '../../_showcase/Demo.svelte';
-	import { createRegionalChart } from '../../_showcase/chart-demo.js';
+	import { createEnergyChart, createRegionalChart } from '../../_showcase/chart-demo.js';
 
 	const chart = createRegionalChart('bar-stacked');
+	const monthly = createEnergyChart({
+		title: 'Daily generation',
+		days: 60,
+		intervalMinutes: 24 * 60,
+		chartType: 'bar-stacked'
+	});
 </script>
 
 <svelte:head>
@@ -18,11 +24,20 @@
 >
 	<BarChart {chart} />
 	{#if chart.hoverData}
+		{@const row = chart.hoverData}
+		{@const total = chart.visibleSeriesNames.reduce((sum, key) => sum + Number(row[key] ?? 0), 0)}
 		<p class="readout">
-			{chart.hoverData.category}: {chart.convertAndFormatValue(Number(chart.hoverData._max ?? 0))}
+			{row.category}: {chart.convertAndFormatValue(total)}
 			{chart.chartOptions.displayUnit} total
 		</p>
 	{/if}
+</Demo>
+
+<Demo
+	title="Time series with a pinned floating card"
+	description="Hovering anywhere in a column highlights it and reports the row. With tooltipAnchor=&quot;top&quot; the floating card stays at the top and only moves to the side of the column with more room, instead of leaping between halves."
+>
+	<StratumChart chart={monthly} showHeader={false} tooltipMode="floating" tooltipAnchor="top" />
 </Demo>
 
 <style>
