@@ -89,7 +89,7 @@ describe('Sparkline', () => {
 	});
 });
 
-describe('StackedArea line hit strokes', () => {
+describe('StackedArea line hit area', () => {
 	// LayerCake measures its container in the browser, so render the element
 	// against a fixed stand-in context: two lines across a 100×50 plot.
 	const lines = ['a', 'b'].map((key, i) => ({
@@ -120,13 +120,14 @@ describe('StackedArea line hit strokes', () => {
 		expect(body).not.toContain('line-hit');
 	});
 
-	it('draws one transparent hit stroke per line at the chosen width', () => {
-		const hits = renderLines(10).match(/<path[^>]*class="line-hit[^>]*>/g) ?? [];
-		expect(hits).toHaveLength(2);
-		for (const hit of hits) {
-			expect(hit).toContain('stroke-width="10"');
-			expect(hit).toContain('pointer-events="stroke"');
-			expect(hit).toContain('stroke="transparent"');
-		}
+	it('lays one transparent hit area over the plot instead of a path per line', () => {
+		const body = renderLines(10);
+		expect(body.match(/class="path-line/g)).toHaveLength(2);
+		const hits = body.match(/<rect[^>]*class="line-hit[^>]*>/g) ?? [];
+		expect(hits).toHaveLength(1);
+		expect(hits[0]).toContain('width="100"');
+		expect(hits[0]).toContain('height="50"');
+		expect(hits[0]).toContain('fill="transparent"');
+		expect(body).not.toMatch(/<path[^>]*line-hit/);
 	});
 });

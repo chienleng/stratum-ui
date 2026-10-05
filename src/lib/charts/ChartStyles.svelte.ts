@@ -62,10 +62,10 @@ export default class ChartStyles {
 	lineColour = $state('var(--su-chart-annotation, #59636e)');
 
 	/**
-	 * Line charts: with a width (px), each series line takes the pointer along a
-	 * transparent stroke that wide and reports its series key on hover (as stack
-	 * areas do), so `hoverKey` and `onhover` name the line under the pointer.
-	 * 0, the default, leaves lines inert.
+	 * Line charts: with a width (px), the line nearest the pointer at the
+	 * hovered time, within half that width, reports its series key on hover (as
+	 * stack areas do), so `hoverKey` and `onhover` name the line under the
+	 * pointer. 0, the default, leaves lines inert.
 	 */
 	lineHitWidth = $state(0);
 

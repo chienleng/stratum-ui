@@ -12,8 +12,8 @@
 	const chart = createEnergyChart({ title: 'Generation mix' });
 	const lineChart = createEnergyChart({ title: 'Generation', chartType: 'line' });
 
-	// Each line takes the pointer along a 10px transparent stroke and names its
-	// series; the others recede while one is hovered.
+	// The line nearest the pointer, within 5px, names its series; the others
+	// recede while one is hovered.
 	const hoverChart = createEnergyChart({ title: 'Generation', chartType: 'line' });
 	hoverChart.chartStyles.lineHitWidth = 10;
 	hoverChart.chartOptions.allowHoverHighlight = true;
@@ -64,7 +64,7 @@
 
 <Demo
 	title="Hoverable lines"
-	description="chartStyles.lineHitWidth gives each line a transparent hit stroke that names its series on hover — onhover's key and the store's hoverKey — so a table or legend can follow the line under the pointer. With chartOptions.allowHoverHighlight the other lines recede."
+	description="chartStyles.lineHitWidth names the line nearest the pointer, within half that width, on hover — onhover's key and the store's hoverKey — so a table or legend can follow the line under the pointer. With chartOptions.allowHoverHighlight the other lines recede."
 	code={hoverCode}
 >
 	<p class="readout" aria-live="polite">
