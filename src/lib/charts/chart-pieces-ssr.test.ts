@@ -4,6 +4,8 @@ import { createSeriesStore, type SeriesDatum } from './create-series-store.js';
 import FillGauge from './FillGauge.svelte';
 import Heatmap from './Heatmap.svelte';
 import LineChart from './LineChart.svelte';
+import { readable } from 'svelte/store';
+import StackedArea from './elements/StackedArea.svelte';
 import Sparkline from './Sparkline.svelte';
 
 const series = (values: Array<number | null>): SeriesDatum[] =>
@@ -84,5 +86,47 @@ describe('Sparkline', () => {
 			props: { chart: createSeriesStore(series([1, null, 3])) }
 		});
 		expect(body).toContain('su-sparkline');
+	});
+});
+
+describe('StackedArea line hit strokes', () => {
+	// LayerCake measures its container in the browser, so render the element
+	// against a fixed stand-in context: two lines across a 100×50 plot.
+	const lines = ['a', 'b'].map((key, i) => ({
+		key,
+		values: [0, 1, 2].map((t) => ({ time: t, value: 10 * (i + 1) + t }))
+	}));
+	const context = new Map([
+		[
+			'LayerCake',
+			{
+				data: readable(lines),
+				xGet: readable((d: { time: number }) => d.time * 50),
+				yGet: readable((d: { value: number }) => 50 - d.value),
+				xScale: readable((v: number) => v * 50),
+				yScale: readable((v: number) => 50 - v),
+				z: readable((d: { key: string }) => d.key),
+				width: readable(100),
+				height: readable(50)
+			}
+		]
+	]);
+	const renderLines = (lineHitWidth?: number) =>
+		render(StackedArea, { props: { display: 'line', lineHitWidth }, context }).body;
+
+	it('leaves lines inert by default', () => {
+		const body = renderLines();
+		expect(body.match(/class="path-line/g)).toHaveLength(2);
+		expect(body).not.toContain('line-hit');
+	});
+
+	it('draws one transparent hit stroke per line at the chosen width', () => {
+		const hits = renderLines(10).match(/<path[^>]*class="line-hit[^>]*>/g) ?? [];
+		expect(hits).toHaveLength(2);
+		for (const hit of hits) {
+			expect(hit).toContain('stroke-width="10"');
+			expect(hit).toContain('pointer-events="stroke"');
+			expect(hit).toContain('stroke="transparent"');
+		}
 	});
 });

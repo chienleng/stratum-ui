@@ -33,6 +33,11 @@
 		highlightId?: string | null;
 		/** Line stroke width */
 		strokeWidth?: string;
+		/**
+		 * Line display: a transparent stroke this wide (px) along each line reports
+		 * its series key on hover; 0 leaves the lines inert
+		 */
+		lineHitWidth?: number;
 		/** Show dots on line chart */
 		showLineDots?: boolean;
 		/** Dot radius */
@@ -67,6 +72,7 @@
 		seriesColours = {},
 		highlightId = null,
 		strokeWidth = '1.5',
+		lineHitWidth = 0,
 		showLineDots = false,
 		dotRadius = 3,
 		dotFill = undefined,
@@ -286,6 +292,22 @@
 					style:stroke
 					stroke-width={strokeWidth}
 					opacity={op}
+				/>
+			{/if}
+
+			{#if lineHitWidth > 0}
+				<path
+					class="line-hit"
+					role="presentation"
+					d={path}
+					fill="none"
+					stroke="transparent"
+					stroke-width={lineHitWidth}
+					pointer-events="stroke"
+					onmousemove={(e) => handlePointerMove(e, seriesKey)}
+					onmouseout={handleMouseOut}
+					onblur={handleMouseOut}
+					onpointerup={(e) => handlePointerUp(e, seriesKey)}
 				/>
 			{/if}
 		{/each}

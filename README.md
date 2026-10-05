@@ -167,6 +167,12 @@ itself beside the hovered column; pass `tooltipAnchor="top"` to keep it at the
 top of the chart and let it move only sideways, rather than snapping between
 the chart's halves as the pointer moves.
 
+Line charts can name the line under the pointer: set
+`chart.chartStyles.lineHitWidth` (px, default 0) and each line takes the pointer
+along a transparent stroke that wide, reporting its series key through
+`onhover(time, key)` and `chart.hoverKey`, as stacked areas do. Pair it with
+`chart.chartOptions.allowHoverHighlight` to recede the other lines.
+
 The showcase site (`pnpm dev`) demonstrates every component, including
 tooltip modes, pan/zoom, brushing and the live token sheet at
 `/theme/tokens` (with copy-theme-CSS buttons).
