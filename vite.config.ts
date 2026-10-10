@@ -39,6 +39,7 @@ export default defineConfig({
 				'@chienleng/stratum-ui/actions': 'src/lib/actions/index.ts',
 				'@chienleng/stratum-ui/utils': 'src/lib/utils/index.ts',
 				'@chienleng/stratum-ui/map': 'src/lib/map/index.ts',
+				'@chienleng/stratum-ui/grid': 'src/lib/grid/index.ts',
 				'@chienleng/stratum-ui/*': 'src/lib/*'
 			}
 		})

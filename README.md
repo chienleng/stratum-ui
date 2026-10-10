@@ -33,6 +33,7 @@ Import a theme once in your root layout, then use components:
 | `@chienleng/stratum-ui/forms`           | `Checkbox`, `CheckboxTree`, `Radio`, `Select`, `MultiSelect`, `TextInput`, `Textarea`, `DateField`, `CurrencyInput`, `Toggle`, `RangeSelector`                                                                             |
 | `@chienleng/stratum-ui/actions`         | `portal`, `dropdownPosition`, `clickoutside`                                                                                                                                                                               |
 | `@chienleng/stratum-ui/utils`           | SI-unit conversion, number/date formatting (incl. `parseCurrency`), data transforms                                                                                                                                        |
+| `@chienleng/stratum-ui/grid`            | `DataGrid` (virtualised rows and columns, pinned columns, sorting, selection, resizing, footer), column/sort types, `sortedIndices`, `defaultCompare`                                                                      |
 | `@chienleng/stratum-ui/map`             | `PointMap` (MapLibre GL bubble map), `MapLegend`, `DaylightLayer`, `CloudCoverLayer`, `collapseMapAttribution`, `DEFAULT_MAP_STYLES`, `isLightMapTheme` — requires the optional peers `svelte-maplibre-gl` + `maplibre-gl` |
 | `@chienleng/stratum-ui/themes/*`        | Theme CSS files (see below)                                                                                                                                                                                                |
 | `@chienleng/stratum-ui/icons/*.svelte`  | Vendored icon components                                                                                                                                                                                                   |
@@ -205,6 +206,73 @@ exist when the popup mounts and allow the floating content to remain visible.
 Keyboard focus stays on the trigger while `aria-activedescendant` identifies the
 highlighted option; `aria-controls` references the open listbox. Popup motion
 preserves full text opacity throughout its animation.
+
+## Data grid
+
+`DataGrid` renders only the rows and columns in view, inside one native scroll
+container, so it stays fast with hundreds of thousands of rows and thousands of
+columns. The header, footer and pinned columns are CSS `sticky`.
+
+```svelte
+<script lang="ts">
+	import { DataGrid, type GridColumn, type GridSort } from '@chienleng/stratum-ui/grid';
+
+	// $state.raw: large arrays must not be deeply reactive.
+	let rows = $state.raw<Unit[]>(data.units);
+	let sort = $state<GridSort | null>(null);
+	let selected = $state<string[]>([]);
+
+	const columns: GridColumn<Unit>[] = [
+		{ id: 'name', header: 'Name', width: 200 },
+		{ id: 'region', header: 'Region', flexgrow: 1 },
+		{
+			id: 'mw',
+			header: 'Capacity',
+			align: 'end',
+			format: (v) => `${v} MW`,
+			footer: (all) => `${all.reduce((sum, u) => sum + u.mw, 0)} MW`
+		}
+	];
+</script>
+
+<div style="height: 480px">
+	<DataGrid
+		data={rows}
+		{columns}
+		rowKey="code"
+		pinned={{ left: 1 }}
+		selectionMode="multiple"
+		bind:selected
+		bind:sort
+		storageKey="units-grid-widths"
+	/>
+</div>
+```
+
+- The grid fills its container's height, so give the container a height.
+- **Columns:** `id` (also the field read, unless `value(row)` is given),
+  `header`, `width` (default 160), `minWidth`/`maxWidth`, `flexgrow` (shares
+  spare width), `align`, `format(value, row)`, a `cell` snippet receiving
+  `{ row, value, column, rowIndex }`, `footer` (text or a function of all rows)
+  or a `footerCell` snippet, and `sortable`/`resizable`/`compare` opt-outs.
+- **Sorting:** clicking a header cycles ascending → descending → off. By
+  default the grid sorts a view of the rows and never mutates `data`. Blank
+  values sort last, and text sorts naturally ("Unit 2" before "Unit 10"). Use
+  `sortMode="manual"` to sort the data yourself, e.g. on a server.
+- **Selection:** `selectionMode` is `'single'` or `'multiple'`. Click,
+  Ctrl/Cmd+click and Shift+click work, as do Space, and Ctrl/Cmd+A when
+  multiple. `selected` holds row keys from `rowKey`, which defaults to `id`;
+  keys must be unique.
+- **Keyboard:** the grid is one tab stop with ARIA grid semantics.
+  - Arrows, Home/End, Ctrl/Cmd+Home/End and PageUp/PageDown move focus.
+  - Enter or Space on a header sorts.
+  - Enter or double-click on a row calls `onrowactivate`.
+  - Alt+←/→ on a header resizes the column.
+- **Resizing:** drag a header's right edge. `columnWidths` is bindable, and
+  `storageKey` remembers widths in `localStorage`.
+- **Limits:** rows have a fixed height (`rowHeight`, default 36). Browsers cap
+  an element's height at roughly 16–33 million px, so around 400,000 rows at
+  36 px is the practical ceiling, with Firefox the lowest.
 
 ## Maps
 

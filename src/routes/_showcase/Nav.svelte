@@ -31,6 +31,10 @@
 			]
 		},
 		{
+			title: 'Grid',
+			links: [{ href: '/grid', label: 'Data grid' }]
+		},
+		{
 			title: 'Forms',
 			links: [{ href: '/forms', label: 'Form elements' }]
 		},
