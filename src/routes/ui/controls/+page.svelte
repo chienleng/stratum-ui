@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { Switch, SwitchTabs, SwitchWithIcons, Tooltip, Button } from '@chienleng/stratum-ui/ui';
+	import {
+		Switch,
+		SwitchTabs,
+		SwitchWithIcons,
+		Tooltip,
+		Button,
+		Slider,
+		RangeSlider,
+		type SliderTick
+	} from '@chienleng/stratum-ui/ui';
 	import Calendar from '@chienleng/stratum-ui/icons/Calendar.svelte';
 	import Move from '@chienleng/stratum-ui/icons/Move.svelte';
 	import Demo from '../../_showcase/Demo.svelte';
@@ -7,6 +16,19 @@
 	let period = $state('week');
 	let tab = $state('power');
 	let view = $state('chart');
+
+	let capacity = $state(30);
+	let years = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+	let year = $state(2026);
+	let liveYear = $state(2026);
+	let committedYears = $state(0);
+	// The first and last years are partial, so their ticks are muted.
+	const yearTicks: SliderTick[] = years.map((value) => ({
+		value,
+		label: String(value),
+		tone: value === 2018 || value === 2026 ? 'muted' : undefined
+	}));
+	let range = $state<[number, number]>([20, 80]);
 </script>
 
 <svelte:head>
@@ -76,6 +98,51 @@
 </Demo>
 
 <Demo
+	title="Slider"
+	description="One value. onchange fires on commit, only when the value changed; oninput follows the drag."
+>
+	<div class="col slider-col">
+		<Slider
+			min={0}
+			max={500}
+			step={10}
+			value={capacity}
+			onchange={(value) => (capacity = value)}
+			formatValue={(value) => `${value} MW`}
+			aria-label="Minimum capacity"
+		/>
+		<Slider
+			step={years}
+			value={year}
+			fill={false}
+			showValue={false}
+			ticks={yearTicks}
+			oninput={(value) => (liveYear = value)}
+			onchange={(value) => {
+				year = value;
+				committedYears += 1;
+			}}
+			formatValue={(value) => (value === 2026 ? '2026 (partial)' : String(value))}
+			aria-label="Year"
+		/>
+		<p class="note">Showing {liveYear}; committed {year} ({committedYears} commits)</p>
+	</div>
+</Demo>
+
+<Demo title="Range slider" description="Two thumbs; onchange fires on commit with the pair.">
+	<div class="col slider-col">
+		<RangeSlider
+			min={0}
+			max={100}
+			step={5}
+			value={range}
+			onchange={(value) => (range = value)}
+			formatValue={(value) => `${value} %`}
+		/>
+	</div>
+</Demo>
+
+<Demo
 	title="Tooltip"
 	description="Portalled and collision-aware; stays open while hovered, so links inside the tip are reachable."
 >
@@ -103,6 +170,17 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--su-space-3, 0.75rem);
+	}
+
+	.col.slider-col {
+		align-items: stretch;
+		max-width: 24rem;
+	}
+
+	.note {
+		margin: 0;
+		font-size: var(--su-font-size-sm, 0.875rem);
+		color: var(--su-text-muted, #59636e);
 	}
 
 	.col {

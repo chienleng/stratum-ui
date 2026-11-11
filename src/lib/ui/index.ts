@@ -19,6 +19,8 @@ export { default as ResizablePanel } from './ResizablePanel.svelte';
 export { default as SectionLabel, type SectionLabelTag } from './SectionLabel.svelte';
 export { default as Sheet } from './Sheet.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
+export { default as Slider } from './Slider.svelte';
+export type { SliderTick } from './slider-ticks.js';
 export { default as Spinner, type SpinnerSize } from './Spinner.svelte';
 export { default as Table, type TableHeader, type TableVariant } from './Table.svelte';
 export { default as Switch, type SwitchButton } from './Switch.svelte';

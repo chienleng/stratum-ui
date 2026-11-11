@@ -13,6 +13,7 @@ import PageHeader from './PageHeader.svelte';
 import Pagination from './Pagination.svelte';
 import PullToRefresh from './PullToRefresh.svelte';
 import SectionLabel from './SectionLabel.svelte';
+import Slider from './Slider.svelte';
 import Spinner from './Spinner.svelte';
 import Table from './Table.svelte';
 import DetailField from './detail/DetailField.svelte';
@@ -223,6 +224,72 @@ describe('Select', () => {
 			props: { id: 'client-select', options: [{ label: 'A', value: 'a' }] }
 		});
 		expect(body).toContain('id="client-select"');
+	});
+});
+
+describe('Slider', () => {
+	const years = [2019, 2020, 2021, 2022];
+
+	it('renders one thumb with its value, bounds, name and formatted value text', () => {
+		const { body } = render(Slider, {
+			props: {
+				step: years,
+				value: 2021,
+				formatValue: (year: number) => `Year ${year}`,
+				'aria-label': 'Reporting period'
+			}
+		});
+		expect(body.match(/role="slider"/g)).toHaveLength(1);
+		expect(body).toContain('aria-valuenow="2021"');
+		expect(body).toContain('aria-valuemin="2019"');
+		expect(body).toContain('aria-valuemax="2022"');
+		expect(body).toContain('aria-valuetext="Year 2021"');
+		expect(body).toContain('aria-label="Reporting period"');
+	});
+
+	it('marks the listed steps with labels and tones, hidden from assistive technology', () => {
+		const { body } = render(Slider, {
+			props: {
+				step: years,
+				value: 2020,
+				ticks: [
+					{ value: 2019, label: '2019' },
+					{ value: 2022, label: '2022', tone: 'muted' as const }
+				]
+			}
+		});
+		expect(body.match(/class="tick svelte/g)).toHaveLength(2);
+		expect(body.match(/class="tick-label svelte/g)).toHaveLength(2);
+		expect(body).toContain('>2022</span>');
+		expect(body).toContain('data-tone="muted"');
+		expect(body).toMatch(/class="slider interactive labelled svelte/);
+	});
+
+	it('marks every step when ticks are on', () => {
+		const { body } = render(Slider, { props: { step: years, value: 2020, ticks: true } });
+		expect(body.match(/class="tick svelte/g)).toHaveLength(4);
+		expect(body).not.toContain('tick-label');
+	});
+
+	it('fills the track by default and not for a one-of-many scale', () => {
+		expect(render(Slider, { props: { value: 40 } }).body).toMatch(/class="range svelte/);
+		expect(render(Slider, { props: { value: 40, fill: false } }).body).not.toMatch(
+			/class="range svelte/
+		);
+	});
+
+	it('shows the formatted value unless asked not to', () => {
+		const props = { value: 40, formatValue: (v: number) => `${v} MW` };
+		expect(render(Slider, { props }).body).toContain('40 MW</span>');
+		expect(render(Slider, { props: { ...props, showValue: false } }).body).not.toMatch(
+			/class="values svelte/
+		);
+	});
+
+	it('marks a disabled slider', () => {
+		const { body } = render(Slider, { props: { value: 40, disabled: true } });
+		expect(body).toContain('aria-disabled="true"');
+		expect(body).toMatch(/class="su-slider[^"]*" data-disabled=""/);
 	});
 });
 
