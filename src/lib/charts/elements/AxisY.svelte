@@ -112,6 +112,9 @@
 	});
 </script>
 
+<!-- The group is shifted left by padding.left, so a left axis's gridlines
+     run to $xRange[1] + padding.left to reach the plot's right edge ('100%' of
+     the viewport stopped short of the last bars by that padding). -->
 <g
 	class="axis y-axis"
 	transform="translate({isRight ? 0 : -$padding.left}, 0)"
@@ -135,7 +138,7 @@
 					style:stroke={(isZero ? zeroValueStroke : stroke) ?? null}
 					stroke-dasharray={isZero ? 'none' : '3'}
 					x1={isRight ? $xRange[0] - $xRange[1] : 0}
-					x2={isRight ? 0 : '100%'}
+					x2={isRight ? 0 : $xRange[1] + $padding.left}
 					y1={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 					y2={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 				/>
@@ -148,7 +151,7 @@
 					style:stroke={stroke ?? null}
 					stroke-dasharray="5"
 					x1={isRight ? $xRange[0] - $xRange[1] : 0}
-					x2={isRight ? 0 : '100%'}
+					x2={isRight ? 0 : $xRange[1] + $padding.left}
 					y1={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 					y2={isBandwidth ? ($yScale.bandwidth?.() ?? 0) / 2 : 0}
 				/>
